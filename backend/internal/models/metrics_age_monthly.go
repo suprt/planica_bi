@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // AgeGroup represents age group enum
 type AgeGroup string
 
@@ -18,10 +20,10 @@ type MetricsAgeMonthly struct {
 	ProjectID             uint     `gorm:"not null;index"`
 	Year                  int      `gorm:"not null;index"`
 	Month                 int      `gorm:"not null;index"`
-	AgeGroup              AgeGroup `gorm:"type:varchar(20)"`
-	Visits                int
-	Users                 int
-	BounceRate            float64 `gorm:"type:decimal(5,2)"`
-	AvgSessionDurationSec int
-	CreatedAt             int64
+	AgeGroup              AgeGroup `gorm:"type:varchar(20);not null"`
+	Visits                int      `gorm:"not null;default:0"`
+	Users                 int      `gorm:"not null;default:0"`
+	BounceRate            float64  `gorm:"type:decimal(5,2)"`
+	AvgSessionDurationSec int      `gorm:"not null;default:0"`
+	CreatedAt             time.Time `gorm:"autoCreateTime"`
 }
