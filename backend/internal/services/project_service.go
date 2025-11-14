@@ -1,44 +1,44 @@
 package services
 
-import "gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+import (
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+)
 
 // ProjectService handles business logic for projects
 type ProjectService struct {
-	// TODO: add repositories
+	projectRepo *repositories.ProjectRepository
 }
 
 // NewProjectService creates a new project service
-func NewProjectService() *ProjectService {
-	return &ProjectService{}
+func NewProjectService(projectRepo *repositories.ProjectRepository) *ProjectService {
+	return &ProjectService{
+		projectRepo: projectRepo,
+	}
 }
 
 // CreateProject creates a new project
 func (s *ProjectService) CreateProject(project *models.Project) error {
-	// TODO: implement
-	return nil
+	return s.projectRepo.Create(project)
 }
 
 // GetProject retrieves a project by ID
 func (s *ProjectService) GetProject(id uint) (*models.Project, error) {
-	// TODO: implement
-	return nil, nil
+	return s.projectRepo.GetByID(id)
 }
 
 // GetAllProjects retrieves all projects
 func (s *ProjectService) GetAllProjects() ([]*models.Project, error) {
-	// TODO: implement
-	return nil, nil
+	return s.projectRepo.GetAll()
 }
 
 // UpdateProject updates a project
 func (s *ProjectService) UpdateProject(project *models.Project) error {
-	// TODO: implement
-	return nil
+	return s.projectRepo.Update(project)
 }
 
 // DeleteProject deletes a project
 func (s *ProjectService) DeleteProject(id uint) error {
-	// TODO: implement
-	return nil
+	return s.projectRepo.Delete(id)
 }
 
