@@ -18,7 +18,7 @@ type MetricsAgeMonthly struct {
 	ProjectID             uint     `gorm:"not null;index"`
 	Year                  int      `gorm:"not null;index"`
 	Month                 int      `gorm:"not null;index"`
-	AgeGroup              AgeGroup `gorm:"type:enum('18-24','25-34','35-44','45-54','55+','unknown')"`
+	AgeGroup              AgeGroup `gorm:"type:varchar(20)"`
 	Visits                int
 	Users                 int
 	BounceRate            float64 `gorm:"type:decimal(5,2)"`

@@ -5,16 +5,28 @@ import (
 	"net/http"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/router"
 )
 
 func main() {
 	// Load configuration
-	_ = config.Load() // TODO: use config for DB connection, etc.
+	cfg := config.Load()
 
-	// TODO: Initialize database connection
+	// Initialize database connection
+	db, err := database.Connect(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.Close()
 
-	// Setup routes
+	// Run migrations
+	if err := database.AutoMigrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Setup routes (pass db connection if needed)
+	_ = db // TODO: pass db to router/handlers when implementing
 	mux := router.SetupRoutes()
 
 	// Start server
