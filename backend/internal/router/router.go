@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
@@ -8,23 +10,37 @@ import (
 )
 
 // SetupRoutes configures all API routes using Echo
-func SetupRoutes() *echo.Echo {
+// Services are passed as parameters to handlers
+func SetupRoutes(
+	projectService handlers.ProjectServiceInterface,
+	reportService handlers.ReportServiceInterface,
+	syncService handlers.SyncServiceInterface,
+	goalService handlers.GoalServiceInterface,
+	directService handlers.DirectServiceInterface,
+	counterService handlers.CounterServiceInterface,
+) *echo.Echo {
 	e := echo.New()
 
 	// Middleware
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
+	// Set request timeout (30 seconds)
+	e.Use(timeoutMiddleware(30 * time.Second))
+
 	// Custom logger middleware using zap
 	e.Use(zapLoggerMiddleware())
 
-	// Initialize handlers
-	projectHandler := handlers.NewProjectHandler()
-	countersHandler := handlers.NewCountersHandler()
-	directHandler := handlers.NewDirectHandler()
-	goalsHandler := handlers.NewGoalsHandler()
-	reportHandler := handlers.NewReportHandler()
-	syncHandler := handlers.NewSyncHandler()
+	// Custom error handler
+	e.HTTPErrorHandler = customErrorHandler
+
+	// Initialize handlers with services
+	projectHandler := handlers.NewProjectHandler(projectService)
+	countersHandler := handlers.NewCountersHandler(counterService)
+	directHandler := handlers.NewDirectHandler(directService)
+	goalsHandler := handlers.NewGoalsHandler(goalService)
+	reportHandler := handlers.NewReportHandler(reportService)
+	syncHandler := handlers.NewSyncHandler(syncService)
 
 	// API group
 	api := e.Group("/api")

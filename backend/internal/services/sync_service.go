@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -14,12 +15,13 @@ import (
 
 // SyncService handles data synchronization with Yandex APIs
 type SyncService struct {
-	projectRepo  *repositories.ProjectRepository
-	metricsRepo  *repositories.MetricsRepository
-	directRepo   *repositories.DirectRepository
+	projectRepo   *repositories.ProjectRepository
+	metricsRepo   *repositories.MetricsRepository
+	directRepo    *repositories.DirectRepository
+	counterRepo   *repositories.CounterRepository
+	goalRepo      *repositories.GoalRepository
 	metricaClient *integrations.YandexMetricaClient
 	directClient  *integrations.YandexDirectClient
-	db           *gorm.DB
 }
 
 // NewSyncService creates a new sync service
@@ -27,24 +29,26 @@ func NewSyncService(
 	projectRepo *repositories.ProjectRepository,
 	metricsRepo *repositories.MetricsRepository,
 	directRepo *repositories.DirectRepository,
+	counterRepo *repositories.CounterRepository,
+	goalRepo *repositories.GoalRepository,
 	metricaClient *integrations.YandexMetricaClient,
 	directClient *integrations.YandexDirectClient,
-	db *gorm.DB,
 ) *SyncService {
 	return &SyncService{
 		projectRepo:   projectRepo,
 		metricsRepo:   metricsRepo,
 		directRepo:    directRepo,
+		counterRepo:   counterRepo,
+		goalRepo:      goalRepo,
 		metricaClient: metricaClient,
 		directClient:  directClient,
-		db:            db,
 	}
 }
 
 // SyncProject synchronizes data for a specific project
-func (s *SyncService) SyncProject(projectID uint) error {
+func (s *SyncService) SyncProject(ctx context.Context, projectID uint) error {
 	// Get project
-	project, err := s.projectRepo.GetByID(projectID)
+	project, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
 		return fmt.Errorf("failed to get project: %w", err)
 	}
@@ -58,12 +62,12 @@ func (s *SyncService) SyncProject(projectID uint) error {
 	currentMonth := int(now.Month())
 
 	// Sync Yandex.Metrica data
-	if err := s.syncMetricaData(projectID, currentYear, currentMonth); err != nil {
+	if err := s.syncMetricaData(ctx, projectID, currentYear, currentMonth); err != nil {
 		return fmt.Errorf("failed to sync Metrica data: %w", err)
 	}
 
 	// Sync Yandex.Direct data
-	if err := s.syncDirectData(projectID, currentYear, currentMonth); err != nil {
+	if err := s.syncDirectData(ctx, projectID, currentYear, currentMonth); err != nil {
 		return fmt.Errorf("failed to sync Direct data: %w", err)
 	}
 
@@ -71,10 +75,10 @@ func (s *SyncService) SyncProject(projectID uint) error {
 }
 
 // syncMetricaData synchronizes Yandex.Metrica data for a project
-func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
+func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year, month int) error {
 	// Get all counters for the project
-	var counters []models.YandexCounter
-	if err := s.db.Where("project_id = ?", projectID).Find(&counters).Error; err != nil {
+	counters, err := s.counterRepo.GetByProjectID(ctx, projectID)
+	if err != nil {
 		return fmt.Errorf("failed to get counters: %w", err)
 	}
 
@@ -132,7 +136,7 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 		}
 
 		// Parse ageData and save
-		if err := s.parseAndSaveAgeMetrics(ageData, projectID, counter.ID, year, month); err != nil {
+		if err := s.parseAndSaveAgeMetrics(ctx, ageData, projectID, counter.ID, year, month); err != nil {
 			if logger.Log != nil {
 				logger.Log.Warn("Failed to save age metrics",
 					zap.Int64("counter_id", counter.CounterID),
@@ -163,10 +167,10 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 	for _, counter := range counters {
 		counterIDs = append(counterIDs, counter.ID)
 	}
-	
-	var goals []models.Goal
+
 	if len(counterIDs) > 0 {
-		if err := s.db.Where("counter_id IN ?", counterIDs).Find(&goals).Error; err == nil {
+		goals, err := s.goalRepo.GetByCounterIDs(ctx, counterIDs)
+		if err == nil {
 			goalIDs := make([]int64, 0, len(goals))
 			for _, goal := range goals {
 				if goal.IsConversion {
@@ -198,7 +202,7 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 	}
 
 	// Check if record exists
-	existing, err := s.metricsRepo.GetMonthlyMetrics(projectID, year, month)
+	existing, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, year, month)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
@@ -211,10 +215,10 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 }
 
 // syncDirectData synchronizes Yandex.Direct data for a project
-func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
+func (s *SyncService) syncDirectData(ctx context.Context, projectID uint, year, month int) error {
 	// Get all Direct accounts for the project
-	var accounts []models.DirectAccount
-	if err := s.db.Where("project_id = ?", projectID).Find(&accounts).Error; err != nil {
+	accounts, err := s.directRepo.GetAccountsByProjectID(ctx, projectID)
+	if err != nil {
 		return fmt.Errorf("failed to get Direct accounts: %w", err)
 	}
 
@@ -272,7 +276,7 @@ func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
 		}
 
 		// Parse campaignsData and save individual campaign metrics
-		if err := s.parseAndSaveCampaignMetrics(campaignsData, account.ID, projectID, year, month); err != nil {
+		if err := s.parseAndSaveCampaignMetrics(ctx, campaignsData, account.ID, projectID, year, month); err != nil {
 			if logger.Log != nil {
 				logger.Log.Warn("Failed to save campaign metrics",
 					zap.Uint("account_id", account.ID),
@@ -301,7 +305,7 @@ func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
 	}
 
 	// Check if record exists
-	existing, err := s.directRepo.GetTotalsMonthly(projectID, year, month)
+	existing, err := s.directRepo.GetTotalsMonthly(ctx, projectID, year, month)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
@@ -314,8 +318,8 @@ func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
 }
 
 // SyncAllProjects synchronizes data for all active projects
-func (s *SyncService) SyncAllProjects() error {
-	projects, err := s.projectRepo.GetAll()
+func (s *SyncService) SyncAllProjects(ctx context.Context) error {
+	projects, err := s.projectRepo.GetAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get projects: %w", err)
 	}
@@ -325,7 +329,7 @@ func (s *SyncService) SyncAllProjects() error {
 			continue
 		}
 
-		if err := s.SyncProject(project.ID); err != nil {
+		if err := s.SyncProject(ctx, project.ID); err != nil {
 			// Log error but continue with other projects
 			if logger.Log != nil {
 				logger.Log.Error("Failed to sync project",
@@ -341,7 +345,7 @@ func (s *SyncService) SyncAllProjects() error {
 }
 
 // FinalizeMonth finalizes data for the previous month
-func (s *SyncService) FinalizeMonth() error {
+func (s *SyncService) FinalizeMonth(ctx context.Context) error {
 	// Called on 1st of each month at 07:00 MSK
 	// Finalize data for the previous month
 	now := time.Now()
@@ -350,7 +354,7 @@ func (s *SyncService) FinalizeMonth() error {
 	month := int(prevMonth.Month())
 
 	// Get all active projects
-	projects, err := s.projectRepo.GetAll()
+	projects, err := s.projectRepo.GetAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get projects: %w", err)
 	}
@@ -361,7 +365,7 @@ func (s *SyncService) FinalizeMonth() error {
 		}
 
 		// Sync data for previous month to ensure it's finalized
-		if err := s.syncMetricaData(project.ID, year, month); err != nil {
+		if err := s.syncMetricaData(ctx, project.ID, year, month); err != nil {
 			// Log error but continue
 			if logger.Log != nil {
 				logger.Log.Error("Failed to finalize Metrica data",
@@ -374,7 +378,7 @@ func (s *SyncService) FinalizeMonth() error {
 			continue
 		}
 
-		if err := s.syncDirectData(project.ID, year, month); err != nil {
+		if err := s.syncDirectData(ctx, project.ID, year, month); err != nil {
 			// Log error but continue
 			if logger.Log != nil {
 				logger.Log.Error("Failed to finalize Direct data",
@@ -453,7 +457,7 @@ func (s *SyncService) parseMetricaMetrics(data interface{}) (int, int, float64, 
 }
 
 // parseAndSaveAgeMetrics parses age breakdown data and saves to database
-func (s *SyncService) parseAndSaveAgeMetrics(data interface{}, projectID uint, counterID uint, year, month int) error {
+func (s *SyncService) parseAndSaveAgeMetrics(ctx context.Context, data interface{}, projectID uint, counterID uint, year, month int) error {
 	if data == nil {
 		return nil
 	}
@@ -514,9 +518,7 @@ func (s *SyncService) parseAndSaveAgeMetrics(data interface{}, projectID uint, c
 		}
 
 		// Check if record exists
-		var existing models.MetricsAgeMonthly
-		err := s.db.Where("project_id = ? AND year = ? AND month = ? AND age_group = ?",
-			projectID, year, month, ageGroup).First(&existing).Error
+		existing, err := s.metricsRepo.GetAgeMetricsByGroup(ctx, projectID, year, month, string(ageGroup))
 
 		ageMetrics := &models.MetricsAgeMonthly{
 			ProjectID:             projectID,
@@ -529,9 +531,9 @@ func (s *SyncService) parseAndSaveAgeMetrics(data interface{}, projectID uint, c
 			AvgSessionDurationSec: durationSec,
 		}
 
-		if err == nil {
+		if err == nil && existing != nil {
 			ageMetrics.ID = existing.ID
-		} else if err != gorm.ErrRecordNotFound {
+		} else if err != nil && err != gorm.ErrRecordNotFound {
 			return err
 		}
 
@@ -642,7 +644,7 @@ func (s *SyncService) parseDirectReport(data interface{}) (int, int, float64) {
 }
 
 // parseAndSaveCampaignMetrics parses campaigns data and saves individual campaign metrics
-func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID uint, projectID uint, year, month int) error {
+func (s *SyncService) parseAndSaveCampaignMetrics(ctx context.Context, data interface{}, accountID uint, projectID uint, year, month int) error {
 	if data == nil {
 		return nil
 	}
@@ -667,8 +669,8 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 	}
 
 	// Get DirectCampaign records for this account
-	var dbCampaigns []models.DirectCampaign
-	if err := s.db.Where("direct_account_id = ?", accountID).Find(&dbCampaigns).Error; err != nil {
+	dbCampaigns, err := s.directRepo.GetCampaignsByAccountID(ctx, accountID)
+	if err != nil {
 		return err
 	}
 
@@ -704,7 +706,7 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 			// Create new campaign record
 			newCampaign := &models.DirectCampaign{
 				DirectAccountID: accountID,
-				CampaignID:       campaignID,
+				CampaignID:      campaignID,
 			}
 			if name, ok := campaignMapData["Name"].(string); ok {
 				newCampaign.Name = name
@@ -712,7 +714,7 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 			if status, ok := campaignMapData["Status"].(string); ok {
 				newCampaign.Status = status
 			}
-			if err := s.db.Create(newCampaign).Error; err != nil {
+			if err := s.directRepo.CreateCampaign(ctx, newCampaign); err != nil {
 				continue
 			}
 			directCampaignID = newCampaign.ID
@@ -744,9 +746,7 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 		}
 
 		// Save campaign monthly metrics
-		var existing models.DirectCampaignMonthly
-		err := s.db.Where("project_id = ? AND direct_campaign_id = ? AND year = ? AND month = ?",
-			projectID, directCampaignID, year, month).First(&existing).Error
+		existing, err := s.directRepo.GetCampaignMonthlyByCampaignID(ctx, projectID, directCampaignID, year, month)
 
 		campaignMetrics := &models.DirectCampaignMonthly{
 			ProjectID:        projectID,
@@ -760,9 +760,9 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 			Cost:             cost,
 		}
 
-		if err == nil {
+		if err == nil && existing != nil {
 			campaignMetrics.ID = existing.ID
-		} else if err != gorm.ErrRecordNotFound {
+		} else if err != nil && err != gorm.ErrRecordNotFound {
 			continue
 		}
 
@@ -773,4 +773,3 @@ func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID ui
 
 	return nil
 }
-

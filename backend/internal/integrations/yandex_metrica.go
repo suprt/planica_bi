@@ -31,4 +31,3 @@ func (c *YandexMetricaClient) GetConversions(counterID int64, goalIDs []int64, d
 	// Metrics: ym:s:goal<goal_id>Visits, ym:s:goal<goal_id>Conversions
 	return nil, nil
 }
-

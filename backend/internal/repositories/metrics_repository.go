@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -16,9 +18,9 @@ func NewMetricsRepository(db *gorm.DB) *MetricsRepository {
 }
 
 // GetMonthlyMetrics retrieves monthly metrics for a project
-func (r *MetricsRepository) GetMonthlyMetrics(projectID uint, year int, month int) (*models.MetricsMonthly, error) {
+func (r *MetricsRepository) GetMonthlyMetrics(ctx context.Context, projectID uint, year int, month int) (*models.MetricsMonthly, error) {
 	var metrics models.MetricsMonthly
-	err := r.db.Where("project_id = ? AND year = ? AND month = ?", projectID, year, month).
+	err := r.db.WithContext(ctx).Where("project_id = ? AND year = ? AND month = ?", projectID, year, month).
 		First(&metrics).Error
 	if err != nil {
 		return nil, err
@@ -32,9 +34,9 @@ func (r *MetricsRepository) SaveMonthlyMetrics(metrics *models.MetricsMonthly) e
 }
 
 // GetAgeMetrics retrieves age-based metrics for a project
-func (r *MetricsRepository) GetAgeMetrics(projectID uint, year int, month int) ([]*models.MetricsAgeMonthly, error) {
+func (r *MetricsRepository) GetAgeMetrics(ctx context.Context, projectID uint, year int, month int) ([]*models.MetricsAgeMonthly, error) {
 	var metrics []*models.MetricsAgeMonthly
-	err := r.db.Where("project_id = ? AND year = ? AND month = ?", projectID, year, month).
+	err := r.db.WithContext(ctx).Where("project_id = ? AND year = ? AND month = ?", projectID, year, month).
 		Find(&metrics).Error
 	return metrics, err
 }
@@ -42,4 +44,15 @@ func (r *MetricsRepository) GetAgeMetrics(projectID uint, year int, month int) (
 // SaveAgeMetrics saves age-based metrics
 func (r *MetricsRepository) SaveAgeMetrics(metrics *models.MetricsAgeMonthly) error {
 	return r.db.Save(metrics).Error
+}
+
+// GetAgeMetricsByGroup retrieves age metrics by project, year, month and age group
+func (r *MetricsRepository) GetAgeMetricsByGroup(ctx context.Context, projectID uint, year int, month int, ageGroup string) (*models.MetricsAgeMonthly, error) {
+	var metrics models.MetricsAgeMonthly
+	err := r.db.WithContext(ctx).Where("project_id = ? AND year = ? AND month = ? AND age_group = ?",
+		projectID, year, month, ageGroup).First(&metrics).Error
+	if err != nil {
+		return nil, err
+	}
+	return &metrics, nil
 }

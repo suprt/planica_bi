@@ -40,9 +40,18 @@ func main() {
 
 	log.Info("Database migrations completed")
 
-	// Setup routes (pass db connection if needed)
-	_ = db // TODO: pass db to router/handlers when implementing
-	e := router.SetupRoutes()
+	// TODO: Initialize repositories and services
+	// For now, passing nil - will be implemented when services are ready
+	// projectRepo := repositories.NewProjectRepository(db)
+	// projectService := services.NewProjectService(projectRepo)
+	// reportService := services.NewReportService(...)
+	// syncService := services.NewSyncService(...)
+	// goalService := services.NewGoalService(...)
+	// directService := services.NewDirectService(...)
+	// counterService := services.NewCounterService(...)
+
+	_ = db                                                // Will be used when initializing repositories
+	e := router.SetupRoutes(nil, nil, nil, nil, nil, nil) // TODO: pass actual services
 
 	// Start server
 	addr := ":8080"
