@@ -1,15 +1,23 @@
 package router
 
 import (
-	"net/http"
-	
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
 )
 
-// SetupRoutes configures all API routes
-func SetupRoutes() *http.ServeMux {
-	mux := http.NewServeMux()
-	
+// SetupRoutes configures all API routes using Echo
+func SetupRoutes() *echo.Echo {
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
+
+	// Custom logger middleware using zap
+	e.Use(zapLoggerMiddleware())
+
 	// Initialize handlers
 	projectHandler := handlers.NewProjectHandler()
 	countersHandler := handlers.NewCountersHandler()
@@ -17,32 +25,34 @@ func SetupRoutes() *http.ServeMux {
 	goalsHandler := handlers.NewGoalsHandler()
 	reportHandler := handlers.NewReportHandler()
 	syncHandler := handlers.NewSyncHandler()
-	
-	// Project routes
-	mux.HandleFunc("POST /api/projects", projectHandler.CreateProject)
-	mux.HandleFunc("GET /api/projects", projectHandler.GetAllProjects)
-	mux.HandleFunc("GET /api/projects/{id}", projectHandler.GetProject)
-	mux.HandleFunc("PUT /api/projects/{id}", projectHandler.UpdateProject)
-	mux.HandleFunc("DELETE /api/projects/{id}", projectHandler.DeleteProject)
-	
-	// Counters routes
-	mux.HandleFunc("POST /api/projects/{id}/counters", countersHandler.AddCounter)
-	mux.HandleFunc("GET /api/projects/{id}/counters", countersHandler.GetCounters)
-	
-	// Direct routes
-	mux.HandleFunc("POST /api/projects/{id}/direct-accounts", directHandler.AddDirectAccount)
-	mux.HandleFunc("GET /api/projects/{id}/direct-accounts", directHandler.GetDirectAccounts)
-	
-	// Goals routes
-	mux.HandleFunc("POST /api/projects/{id}/goals", goalsHandler.AddGoal)
-	mux.HandleFunc("GET /api/projects/{id}/goals", goalsHandler.GetGoals)
-	
-	// Report routes
-	mux.HandleFunc("GET /api/report/{id}", reportHandler.GetReport)
-	
-	// Sync routes
-	mux.HandleFunc("POST /api/sync/{id}", syncHandler.SyncProject)
-	
-	return mux
-}
 
+	// API group
+	api := e.Group("/api")
+
+	// Project routes
+	api.POST("/projects", projectHandler.CreateProject)
+	api.GET("/projects", projectHandler.GetAllProjects)
+	api.GET("/projects/:id", projectHandler.GetProject)
+	api.PUT("/projects/:id", projectHandler.UpdateProject)
+	api.DELETE("/projects/:id", projectHandler.DeleteProject)
+
+	// Counters routes
+	api.POST("/projects/:id/counters", countersHandler.AddCounter)
+	api.GET("/projects/:id/counters", countersHandler.GetCounters)
+
+	// Direct routes
+	api.POST("/projects/:id/direct-accounts", directHandler.AddDirectAccount)
+	api.GET("/projects/:id/direct-accounts", directHandler.GetDirectAccounts)
+
+	// Goals routes
+	api.POST("/projects/:id/goals", goalsHandler.AddGoal)
+	api.GET("/projects/:id/goals", goalsHandler.GetGoals)
+
+	// Report routes
+	api.GET("/report/:id", reportHandler.GetReport)
+
+	// Sync routes
+	api.POST("/sync/:id", syncHandler.SyncProject)
+
+	return e
+}

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // ProjectHandler handles HTTP requests for projects
@@ -15,32 +15,31 @@ func NewProjectHandler() *ProjectHandler {
 }
 
 // CreateProject handles POST /api/projects
-func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) CreateProject(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// GetProject handles GET /api/projects/{id}
-func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
+// GetProject handles GET /api/projects/:id
+func (h *ProjectHandler) GetProject(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
 // GetAllProjects handles GET /api/projects
-func (h *ProjectHandler) GetAllProjects(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetAllProjects(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// UpdateProject handles PUT /api/projects/{id}
-func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
+// UpdateProject handles PUT /api/projects/:id
+func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// DeleteProject handles DELETE /api/projects/{id}
-func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+// DeleteProject handles DELETE /api/projects/:id
+func (h *ProjectHandler) DeleteProject(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
-

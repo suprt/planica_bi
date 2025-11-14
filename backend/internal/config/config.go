@@ -21,6 +21,8 @@ type Config struct {
 	YandexOAuthToken   string
 	YandexDefaultCurrency string
 	DefaultTimezone    string
+	
+	LogLevel string
 }
 
 // Load loads configuration from environment variables
@@ -41,6 +43,7 @@ func Load() *Config {
 		YandexOAuthToken:     getEnv("YANDEX_OAUTH_TOKEN", ""),
 		YandexDefaultCurrency: getEnv("YANDEX_DEFAULT_CURRENCY", "RUB"),
 		DefaultTimezone:      getEnv("DEFAULT_TIMEZONE", "Europe/Moscow"),
+		LogLevel:             getEnv("LOG_LEVEL", "info"),
 	}
 }
 

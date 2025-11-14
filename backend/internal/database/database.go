@@ -2,14 +2,14 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
+	applogger "gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
 )
 
@@ -28,7 +28,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 
 	var err error
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: gormlogger.Default.LogMode(gormlogger.Info),
 	})
 
 	if err != nil {
@@ -46,7 +46,9 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	log.Println("Database connection established")
+	if applogger.Log != nil {
+		applogger.Log.Info("Database connection established")
+	}
 	return DB, nil
 }
 
@@ -73,7 +75,9 @@ func AutoMigrate() error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	log.Println("Database migrations completed")
+	if applogger.Log != nil {
+		applogger.Log.Info("Database migrations completed")
+	}
 	return nil
 }
 

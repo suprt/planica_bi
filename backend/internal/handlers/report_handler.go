@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // ReportHandler handles HTTP requests for reports
@@ -14,10 +14,10 @@ func NewReportHandler() *ReportHandler {
 	return &ReportHandler{}
 }
 
-// GetReport handles GET /api/report/{id}
-func (h *ReportHandler) GetReport(w http.ResponseWriter, r *http.Request) {
+// GetReport handles GET /api/report/:id
+func (h *ReportHandler) GetReport(c echo.Context) error {
 	// TODO: implement
 	// Returns JSON with report data for 3 months (M, M-1, M-2)
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // DirectHandler handles HTTP requests for Direct accounts
@@ -14,15 +14,14 @@ func NewDirectHandler() *DirectHandler {
 	return &DirectHandler{}
 }
 
-// AddDirectAccount handles POST /api/projects/{id}/direct-accounts
-func (h *DirectHandler) AddDirectAccount(w http.ResponseWriter, r *http.Request) {
+// AddDirectAccount handles POST /api/projects/:id/direct-accounts
+func (h *DirectHandler) AddDirectAccount(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// GetDirectAccounts handles GET /api/projects/{id}/direct-accounts
-func (h *DirectHandler) GetDirectAccounts(w http.ResponseWriter, r *http.Request) {
+// GetDirectAccounts handles GET /api/projects/:id/direct-accounts
+func (h *DirectHandler) GetDirectAccounts(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
-

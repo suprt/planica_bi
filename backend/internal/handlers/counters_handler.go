@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // CountersHandler handles HTTP requests for Yandex counters
@@ -14,15 +14,15 @@ func NewCountersHandler() *CountersHandler {
 	return &CountersHandler{}
 }
 
-// AddCounter handles POST /api/projects/{id}/counters
-func (h *CountersHandler) AddCounter(w http.ResponseWriter, r *http.Request) {
+// AddCounter handles POST /api/projects/:id/counters
+func (h *CountersHandler) AddCounter(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// GetCounters handles GET /api/projects/{id}/counters
-func (h *CountersHandler) GetCounters(w http.ResponseWriter, r *http.Request) {
+// GetCounters handles GET /api/projects/:id/counters
+func (h *CountersHandler) GetCounters(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
