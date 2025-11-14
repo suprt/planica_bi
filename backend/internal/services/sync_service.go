@@ -88,7 +88,7 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 
 	// Aggregate metrics from all counters
 	var totalVisits, totalUsers int
-	var totalBounceRate, totalAvgDuration float64
+	var totalBounceRate float64
 	var totalDurationSec int
 	counterCount := 0
 
@@ -200,7 +200,9 @@ func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
 	for _, account := range accounts {
 		// Create Direct client for this account
 		// TODO: Get token from config or account settings
-		directClient := s.directClient // For now, use shared client
+		// For now, use shared client
+		_ = account // account will be used when implementing per-account tokens
+		directClient := s.directClient
 
 		// Get campaign report
 		reportData, err := directClient.GetCampaignReport(dateFrom, dateTo)
