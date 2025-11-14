@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/integrations"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -88,8 +90,9 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 
 	// Aggregate metrics from all counters
 	var totalVisits, totalUsers int
-	var totalBounceRate, totalAvgDuration float64
+	var totalBounceRate float64
 	var totalDurationSec int
+	var bounceRateSum float64
 	counterCount := 0
 
 	for _, counter := range counters {
@@ -97,23 +100,62 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 		metricsData, err := s.metricaClient.GetMetrics(counter.CounterID, dateFrom, dateTo)
 		if err != nil {
 			// Log error but continue with other counters
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to get metrics from Metrica API",
+					zap.Int64("counter_id", counter.CounterID),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 
-		// TODO: Parse metricsData and aggregate
-		// For now, this is a placeholder structure
-		_ = metricsData
+		// Parse metricsData and aggregate
+		visits, users, bounceRate, duration := s.parseMetricaMetrics(metricsData)
+		totalVisits += visits
+		totalUsers += users
+		if bounceRate > 0 {
+			bounceRateSum += bounceRate
+			counterCount++
+		}
+		totalDurationSec += duration
 
 		// Get age breakdown
 		ageData, err := s.metricaClient.GetMetricsByAge(counter.CounterID, dateFrom, dateTo)
 		if err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to get age metrics from Metrica API",
+					zap.Int64("counter_id", counter.CounterID),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 
-		// TODO: Parse ageData and save
-		_ = ageData
+		// Parse ageData and save
+		if err := s.parseAndSaveAgeMetrics(ageData, projectID, counter.ID, year, month); err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to save age metrics",
+					zap.Int64("counter_id", counter.CounterID),
+					zap.Error(err),
+				)
+			}
+		}
+	}
 
-		counterCount++
+	// Calculate average bounce rate
+	if counterCount > 0 {
+		totalBounceRate = bounceRateSum / float64(counterCount)
+	}
+
+	// Initialize monthly metrics
+	monthlyMetrics := &models.MetricsMonthly{
+		ProjectID:             projectID,
+		Year:                  year,
+		Month:                 month,
+		Visits:                totalVisits,
+		Users:                 totalUsers,
+		BounceRate:            totalBounceRate,
+		AvgSessionDurationSec: totalDurationSec,
 	}
 
 	// Get goals for conversions
@@ -138,26 +180,21 @@ func (s *SyncService) syncMetricaData(projectID uint, year, month int) error {
 					if counter.IsPrimary {
 						conversionsData, err := s.metricaClient.GetConversions(counter.CounterID, goalIDs, dateFrom, dateTo)
 						if err == nil {
-							// TODO: Parse conversionsData
-							_ = conversionsData
+							conversions := s.parseConversions(conversionsData)
+							if conversions != nil {
+								monthlyMetrics.Conversions = conversions
+							}
+						} else if logger.Log != nil {
+							logger.Log.Warn("Failed to get conversions from Metrica API",
+								zap.Int64("counter_id", counter.CounterID),
+								zap.Error(err),
+							)
 						}
 						break
 					}
 				}
 			}
 		}
-	}
-
-	// Save aggregated monthly metrics
-	// TODO: Calculate actual aggregated values from API responses
-	monthlyMetrics := &models.MetricsMonthly{
-		ProjectID:             projectID,
-		Year:                  year,
-		Month:                 month,
-		Visits:                totalVisits,
-		Users:                 totalUsers,
-		BounceRate:            totalBounceRate,
-		AvgSessionDurationSec: totalDurationSec,
 	}
 
 	// Check if record exists
@@ -198,29 +235,51 @@ func (s *SyncService) syncDirectData(projectID uint, year, month int) error {
 	var totalCPC float64
 
 	for _, account := range accounts {
-		// Create Direct client for this account
-		// TODO: Get token from config or account settings
-		directClient := s.directClient // For now, use shared client
+		// Use shared client for now
+		// Note: In future, token should be retrieved from account settings or config
+		directClient := s.directClient
 
 		// Get campaign report
 		reportData, err := directClient.GetCampaignReport(dateFrom, dateTo)
 		if err != nil {
 			// Log error but continue with other accounts
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to get campaign report from Direct API",
+					zap.Uint("account_id", account.ID),
+					zap.String("client_login", account.ClientLogin),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 
-		// TODO: Parse reportData and aggregate
-		// For now, this is a placeholder structure
-		_ = reportData
+		// Parse reportData and aggregate
+		impressions, clicks, cost := s.parseDirectReport(reportData)
+		totalImpressions += impressions
+		totalClicks += clicks
+		totalCost += cost
 
 		// Get campaigns list
 		campaignsData, err := directClient.GetCampaigns()
 		if err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to get campaigns from Direct API",
+					zap.Uint("account_id", account.ID),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 
-		// TODO: Parse campaignsData and save individual campaign metrics
-		_ = campaignsData
+		// Parse campaignsData and save individual campaign metrics
+		if err := s.parseAndSaveCampaignMetrics(campaignsData, account.ID, projectID, year, month); err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to save campaign metrics",
+					zap.Uint("account_id", account.ID),
+					zap.Error(err),
+				)
+			}
+		}
 	}
 
 	// Calculate aggregated metrics
@@ -268,7 +327,12 @@ func (s *SyncService) SyncAllProjects() error {
 
 		if err := s.SyncProject(project.ID); err != nil {
 			// Log error but continue with other projects
-			// TODO: Add proper logging
+			if logger.Log != nil {
+				logger.Log.Error("Failed to sync project",
+					zap.Uint("project_id", project.ID),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 	}
@@ -299,11 +363,410 @@ func (s *SyncService) FinalizeMonth() error {
 		// Sync data for previous month to ensure it's finalized
 		if err := s.syncMetricaData(project.ID, year, month); err != nil {
 			// Log error but continue
+			if logger.Log != nil {
+				logger.Log.Error("Failed to finalize Metrica data",
+					zap.Uint("project_id", project.ID),
+					zap.Int("year", year),
+					zap.Int("month", month),
+					zap.Error(err),
+				)
+			}
 			continue
 		}
 
 		if err := s.syncDirectData(project.ID, year, month); err != nil {
 			// Log error but continue
+			if logger.Log != nil {
+				logger.Log.Error("Failed to finalize Direct data",
+					zap.Uint("project_id", project.ID),
+					zap.Int("year", year),
+					zap.Int("month", month),
+					zap.Error(err),
+				)
+			}
+			continue
+		}
+	}
+
+	return nil
+}
+
+// parseMetricaMetrics parses metrics data from Yandex.Metrica API
+// Returns: visits, users, bounceRate, avgDurationSec
+func (s *SyncService) parseMetricaMetrics(data interface{}) (int, int, float64, int) {
+	if data == nil {
+		return 0, 0, 0, 0
+	}
+
+	// Try to parse as map[string]interface{}
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return 0, 0, 0, 0
+	}
+
+	var visits, users int
+	var bounceRate float64
+	var durationSec int
+
+	// Parse data array if exists
+	if dataArray, ok := dataMap["data"].([]interface{}); ok && len(dataArray) > 0 {
+		if firstRow, ok := dataArray[0].([]interface{}); ok && len(firstRow) >= 4 {
+			// Typical structure: [visits, users, bounceRate, avgDuration]
+			if v, ok := firstRow[0].(float64); ok {
+				visits = int(v)
+			}
+			if v, ok := firstRow[1].(float64); ok {
+				users = int(v)
+			}
+			if v, ok := firstRow[2].(float64); ok {
+				bounceRate = v
+			}
+			if v, ok := firstRow[3].(float64); ok {
+				durationSec = int(v)
+			}
+		}
+	}
+
+	// Alternative: try direct fields
+	if visits == 0 {
+		if v, ok := dataMap["visits"].(float64); ok {
+			visits = int(v)
+		}
+	}
+	if users == 0 {
+		if v, ok := dataMap["users"].(float64); ok {
+			users = int(v)
+		}
+	}
+	if bounceRate == 0 {
+		if v, ok := dataMap["bounceRate"].(float64); ok {
+			bounceRate = v
+		}
+	}
+	if durationSec == 0 {
+		if v, ok := dataMap["avgVisitDurationSeconds"].(float64); ok {
+			durationSec = int(v)
+		}
+	}
+
+	return visits, users, bounceRate, durationSec
+}
+
+// parseAndSaveAgeMetrics parses age breakdown data and saves to database
+func (s *SyncService) parseAndSaveAgeMetrics(data interface{}, projectID uint, counterID uint, year, month int) error {
+	if data == nil {
+		return nil
+	}
+
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	// Parse data array
+	dataArray, ok := dataMap["data"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	// Map age intervals to our AgeGroup enum
+	ageGroupMap := map[string]models.AgeGroup{
+		"18-24":   models.AgeGroup1824,
+		"25-34":   models.AgeGroup2534,
+		"35-44":   models.AgeGroup3544,
+		"45-54":   models.AgeGroup4554,
+		"55+":     models.AgeGroup55Plus,
+		"unknown": models.AgeGroupUnknown,
+	}
+
+	for _, row := range dataArray {
+		rowArray, ok := row.([]interface{})
+		if !ok || len(rowArray) < 5 {
+			continue
+		}
+
+		// Parse age group
+		ageInterval, ok := rowArray[0].(string)
+		if !ok {
+			continue
+		}
+		ageGroup, exists := ageGroupMap[ageInterval]
+		if !exists {
+			ageGroup = models.AgeGroupUnknown
+		}
+
+		// Parse metrics
+		var visits, users int
+		var bounceRate float64
+		var durationSec int
+
+		if v, ok := rowArray[1].(float64); ok {
+			visits = int(v)
+		}
+		if v, ok := rowArray[2].(float64); ok {
+			users = int(v)
+		}
+		if v, ok := rowArray[3].(float64); ok {
+			bounceRate = v
+		}
+		if v, ok := rowArray[4].(float64); ok {
+			durationSec = int(v)
+		}
+
+		// Check if record exists
+		var existing models.MetricsAgeMonthly
+		err := s.db.Where("project_id = ? AND year = ? AND month = ? AND age_group = ?",
+			projectID, year, month, ageGroup).First(&existing).Error
+
+		ageMetrics := &models.MetricsAgeMonthly{
+			ProjectID:             projectID,
+			Year:                  year,
+			Month:                 month,
+			AgeGroup:              ageGroup,
+			Visits:                visits,
+			Users:                 users,
+			BounceRate:            bounceRate,
+			AvgSessionDurationSec: durationSec,
+		}
+
+		if err == nil {
+			ageMetrics.ID = existing.ID
+		} else if err != gorm.ErrRecordNotFound {
+			return err
+		}
+
+		if err := s.metricsRepo.SaveAgeMetrics(ageMetrics); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// parseConversions parses conversions data from Yandex.Metrica API
+func (s *SyncService) parseConversions(data interface{}) *int {
+	if data == nil {
+		return nil
+	}
+
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var totalConversions int
+
+	// Parse data array
+	if dataArray, ok := dataMap["data"].([]interface{}); ok {
+		for _, row := range dataArray {
+			rowArray, ok := row.([]interface{})
+			if !ok || len(rowArray) < 2 {
+				continue
+			}
+			// Sum all conversions
+			if v, ok := rowArray[1].(float64); ok {
+				totalConversions += int(v)
+			}
+		}
+	}
+
+	// Alternative: direct field
+	if totalConversions == 0 {
+		if v, ok := dataMap["conversions"].(float64); ok {
+			totalConversions = int(v)
+		}
+	}
+
+	if totalConversions == 0 {
+		return nil
+	}
+
+	return &totalConversions
+}
+
+// parseDirectReport parses campaign report data from Yandex.Direct API
+// Returns: impressions, clicks, cost
+func (s *SyncService) parseDirectReport(data interface{}) (int, int, float64) {
+	if data == nil {
+		return 0, 0, 0
+	}
+
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return 0, 0, 0
+	}
+
+	var impressions, clicks int
+	var cost float64
+
+	// Parse report structure
+	if report, ok := dataMap["report"].(map[string]interface{}); ok {
+		if rows, ok := report["rows"].([]interface{}); ok {
+			for _, row := range rows {
+				rowMap, ok := row.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				if v, ok := rowMap["Impressions"].(float64); ok {
+					impressions += int(v)
+				}
+				if v, ok := rowMap["Clicks"].(float64); ok {
+					clicks += int(v)
+				}
+				if v, ok := rowMap["Cost"].(float64); ok {
+					cost += v
+				}
+			}
+		}
+	}
+
+	// Alternative: direct totals
+	if impressions == 0 {
+		if v, ok := dataMap["Impressions"].(float64); ok {
+			impressions = int(v)
+		}
+	}
+	if clicks == 0 {
+		if v, ok := dataMap["Clicks"].(float64); ok {
+			clicks = int(v)
+		}
+	}
+	if cost == 0 {
+		if v, ok := dataMap["Cost"].(float64); ok {
+			cost = v
+		}
+	}
+
+	return impressions, clicks, cost
+}
+
+// parseAndSaveCampaignMetrics parses campaigns data and saves individual campaign metrics
+func (s *SyncService) parseAndSaveCampaignMetrics(data interface{}, accountID uint, projectID uint, year, month int) error {
+	if data == nil {
+		return nil
+	}
+
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	// Get campaigns array
+	var campaigns []interface{}
+	if result, ok := dataMap["result"].(map[string]interface{}); ok {
+		if campaignsArray, ok := result["Campaigns"].([]interface{}); ok {
+			campaigns = campaignsArray
+		}
+	} else if campaignsArray, ok := dataMap["Campaigns"].([]interface{}); ok {
+		campaigns = campaignsArray
+	}
+
+	if len(campaigns) == 0 {
+		return nil
+	}
+
+	// Get DirectCampaign records for this account
+	var dbCampaigns []models.DirectCampaign
+	if err := s.db.Where("direct_account_id = ?", accountID).Find(&dbCampaigns).Error; err != nil {
+		return err
+	}
+
+	// Create map for quick lookup
+	campaignMap := make(map[int64]uint)
+	for _, dbCampaign := range dbCampaigns {
+		campaignMap[dbCampaign.CampaignID] = dbCampaign.ID
+	}
+
+	// Parse and save metrics for each campaign
+	for _, campaignData := range campaigns {
+		campaignMapData, ok := campaignData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		var campaignID int64
+		if id, ok := campaignMapData["Id"].(float64); ok {
+			campaignID = int64(id)
+		} else if id, ok := campaignMapData["CampaignId"].(float64); ok {
+			campaignID = int64(id)
+		}
+
+		if campaignID == 0 {
+			continue
+		}
+
+		// Find or create DirectCampaign record
+		var directCampaignID uint
+		if dbID, exists := campaignMap[campaignID]; exists {
+			directCampaignID = dbID
+		} else {
+			// Create new campaign record
+			newCampaign := &models.DirectCampaign{
+				DirectAccountID: accountID,
+				CampaignID:       campaignID,
+			}
+			if name, ok := campaignMapData["Name"].(string); ok {
+				newCampaign.Name = name
+			}
+			if status, ok := campaignMapData["Status"].(string); ok {
+				newCampaign.Status = status
+			}
+			if err := s.db.Create(newCampaign).Error; err != nil {
+				continue
+			}
+			directCampaignID = newCampaign.ID
+		}
+
+		// Parse metrics (if available in campaign data)
+		var impressions, clicks int
+		var cost float64
+		var ctr, cpc float64
+
+		if stats, ok := campaignMapData["Statistics"].(map[string]interface{}); ok {
+			if v, ok := stats["Impressions"].(float64); ok {
+				impressions = int(v)
+			}
+			if v, ok := stats["Clicks"].(float64); ok {
+				clicks = int(v)
+			}
+			if v, ok := stats["Cost"].(float64); ok {
+				cost = v
+			}
+		}
+
+		// Calculate CTR and CPC
+		if impressions > 0 && clicks > 0 {
+			ctr = (float64(clicks) / float64(impressions)) * 100
+		}
+		if clicks > 0 && cost > 0 {
+			cpc = cost / float64(clicks)
+		}
+
+		// Save campaign monthly metrics
+		var existing models.DirectCampaignMonthly
+		err := s.db.Where("project_id = ? AND direct_campaign_id = ? AND year = ? AND month = ?",
+			projectID, directCampaignID, year, month).First(&existing).Error
+
+		campaignMetrics := &models.DirectCampaignMonthly{
+			ProjectID:        projectID,
+			DirectCampaignID: directCampaignID,
+			Year:             year,
+			Month:            month,
+			Impressions:      impressions,
+			Clicks:           clicks,
+			CTRPct:           ctr,
+			CPC:              cpc,
+			Cost:             cost,
+		}
+
+		if err == nil {
+			campaignMetrics.ID = existing.ID
+		} else if err != gorm.ErrRecordNotFound {
+			continue
+		}
+
+		if err := s.directRepo.SaveCampaignMonthly(campaignMetrics); err != nil {
 			continue
 		}
 	}
