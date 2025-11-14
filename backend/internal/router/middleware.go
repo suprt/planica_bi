@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
-	
+
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 )
 
@@ -20,7 +20,7 @@ func zapLoggerMiddleware() echo.MiddlewareFunc {
 
 			// Log request
 			duration := time.Since(start)
-			
+
 			fields := []zap.Field{
 				zap.String("method", c.Request().Method),
 				zap.String("path", c.Request().URL.Path),
@@ -45,4 +45,3 @@ func zapLoggerMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
-
