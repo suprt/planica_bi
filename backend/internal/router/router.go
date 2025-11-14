@@ -12,9 +12,11 @@ func SetupRoutes() *echo.Echo {
 	e := echo.New()
 
 	// Middleware
-	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	// Custom logger middleware using zap
+	e.Use(zapLoggerMiddleware())
 
 	// Initialize handlers
 	projectHandler := handlers.NewProjectHandler()
