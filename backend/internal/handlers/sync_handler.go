@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // SyncHandler handles HTTP requests for synchronization
@@ -14,10 +14,10 @@ func NewSyncHandler() *SyncHandler {
 	return &SyncHandler{}
 }
 
-// SyncProject handles POST /api/sync/{id}
-func (h *SyncHandler) SyncProject(w http.ResponseWriter, r *http.Request) {
+// SyncProject handles POST /api/sync/:id
+func (h *SyncHandler) SyncProject(c echo.Context) error {
 	// TODO: implement
 	// Force synchronization for a specific project
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 

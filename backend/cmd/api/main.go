@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
@@ -27,12 +26,12 @@ func main() {
 
 	// Setup routes (pass db connection if needed)
 	_ = db // TODO: pass db to router/handlers when implementing
-	mux := router.SetupRoutes()
+	e := router.SetupRoutes()
 
 	// Start server
 	addr := ":8080"
 	log.Printf("Server starting on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := e.Start(addr); err != nil {
 		log.Fatal(err)
 	}
 }

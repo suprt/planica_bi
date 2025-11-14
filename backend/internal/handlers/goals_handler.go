@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 // GoalsHandler handles HTTP requests for goals
@@ -14,15 +14,15 @@ func NewGoalsHandler() *GoalsHandler {
 	return &GoalsHandler{}
 }
 
-// AddGoal handles POST /api/projects/{id}/goals
-func (h *GoalsHandler) AddGoal(w http.ResponseWriter, r *http.Request) {
+// AddGoal handles POST /api/projects/:id/goals
+func (h *GoalsHandler) AddGoal(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
-// GetGoals handles GET /api/projects/{id}/goals
-func (h *GoalsHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
+// GetGoals handles GET /api/projects/:id/goals
+func (h *GoalsHandler) GetGoals(c echo.Context) error {
 	// TODO: implement
-	w.WriteHeader(http.StatusNotImplemented)
+	return c.NoContent(501) // Not Implemented
 }
 
