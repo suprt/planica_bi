@@ -510,7 +510,7 @@ func (s *ReportService) AnalyzeChannelMetrics(ctx context.Context, metricsData *
 	}
 
 	if !found {
-		return nil, fmt.Errorf("Python script not found. Tried: %v", possiblePaths)
+		return nil, fmt.Errorf("python script not found. Tried: %v", possiblePaths)
 	}
 
 	// Create context with timeout for script execution (120 seconds)
@@ -552,7 +552,7 @@ func (s *ReportService) AnalyzeChannelMetrics(ctx context.Context, metricsData *
 				zap.String("stderr", stderr.String()),
 			)
 		}
-		return nil, fmt.Errorf("Python script execution failed: %w (stderr: %s)", err, stderr.String())
+		return nil, fmt.Errorf("python script execution failed: %w (stderr: %s)", err, stderr.String())
 	}
 
 	// Parse JSON output
