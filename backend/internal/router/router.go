@@ -6,12 +6,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
 )
 
 // SetupRoutes configures all API routes using Echo
 // Services are passed as parameters to handlers
 func SetupRoutes(
+	cfg *config.Config,
 	projectService handlers.ProjectServiceInterface,
 	reportService handlers.ReportServiceInterface,
 	syncService handlers.SyncServiceInterface,
@@ -41,9 +43,14 @@ func SetupRoutes(
 	goalsHandler := handlers.NewGoalsHandler(goalService)
 	reportHandler := handlers.NewReportHandler(reportService)
 	syncHandler := handlers.NewSyncHandler(syncService)
+	oauthHandler := handlers.NewOAuthHandler(cfg)
 
 	// API group
 	api := e.Group("/api")
+
+	// OAuth routes
+	api.GET("/oauth/yandex", oauthHandler.InitiateAuth)
+	api.GET("/oauth/yandex/callback", oauthHandler.HandleCallback)
 
 	// Project routes
 	api.POST("/projects", projectHandler.CreateProject)

@@ -101,7 +101,7 @@ func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year,
 
 	for _, counter := range counters {
 		// Get metrics from API
-		metricsData, err := s.metricaClient.GetMetrics(counter.CounterID, dateFrom, dateTo)
+		metricsData, err := s.metricaClient.GetMetrics(ctx, counter.CounterID, dateFrom, dateTo)
 		if err != nil {
 			// Log error but continue with other counters
 			if logger.Log != nil {
@@ -124,7 +124,7 @@ func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year,
 		totalDurationSec += duration
 
 		// Get age breakdown
-		ageData, err := s.metricaClient.GetMetricsByAge(counter.CounterID, dateFrom, dateTo)
+		ageData, err := s.metricaClient.GetMetricsByAge(ctx, counter.CounterID, dateFrom, dateTo)
 		if err != nil {
 			if logger.Log != nil {
 				logger.Log.Warn("Failed to get age metrics from Metrica API",
@@ -182,7 +182,7 @@ func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year,
 				// Get conversions for primary counter
 				for _, counter := range counters {
 					if counter.IsPrimary {
-						conversionsData, err := s.metricaClient.GetConversions(counter.CounterID, goalIDs, dateFrom, dateTo)
+						conversionsData, err := s.metricaClient.GetConversions(ctx, counter.CounterID, goalIDs, dateFrom, dateTo)
 						if err == nil {
 							conversions := s.parseConversions(conversionsData)
 							if conversions != nil {
@@ -244,7 +244,7 @@ func (s *SyncService) syncDirectData(ctx context.Context, projectID uint, year, 
 		directClient := s.directClient
 
 		// Get campaign report
-		reportData, err := directClient.GetCampaignReport(dateFrom, dateTo)
+		reportData, err := directClient.GetCampaignReport(ctx, dateFrom, dateTo)
 		if err != nil {
 			// Log error but continue with other accounts
 			if logger.Log != nil {
@@ -264,7 +264,7 @@ func (s *SyncService) syncDirectData(ctx context.Context, projectID uint, year, 
 		totalCost += cost
 
 		// Get campaigns list
-		campaignsData, err := directClient.GetCampaigns()
+		campaignsData, err := directClient.GetCampaigns(ctx)
 		if err != nil {
 			if logger.Log != nil {
 				logger.Log.Warn("Failed to get campaigns from Direct API",
@@ -462,6 +462,12 @@ func (s *SyncService) parseAndSaveAgeMetrics(ctx context.Context, data interface
 		return nil
 	}
 
+	// Try to cast to []AgeMetricsResult first (new format)
+	if ageResults, ok := data.([]integrations.AgeMetricsResult); ok {
+		return s.parseAndSaveAgeMetricsTyped(ctx, ageResults, projectID, counterID, year, month)
+	}
+
+	// Fallback to old format (map[string]interface{}) for backward compatibility
 	dataMap, ok := data.(map[string]interface{})
 	if !ok {
 		return nil
@@ -529,6 +535,52 @@ func (s *SyncService) parseAndSaveAgeMetrics(ctx context.Context, data interface
 			Users:                 users,
 			BounceRate:            bounceRate,
 			AvgSessionDurationSec: durationSec,
+		}
+
+		if err == nil && existing != nil {
+			ageMetrics.ID = existing.ID
+		} else if err != nil && err != gorm.ErrRecordNotFound {
+			return err
+		}
+
+		if err := s.metricsRepo.SaveAgeMetrics(ageMetrics); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// parseAndSaveAgeMetricsTyped parses typed age breakdown data and saves to database
+func (s *SyncService) parseAndSaveAgeMetricsTyped(ctx context.Context, ageResults []integrations.AgeMetricsResult, projectID uint, counterID uint, year, month int) error {
+	// Map age intervals to our AgeGroup enum
+	ageGroupMap := map[string]models.AgeGroup{
+		"18-24":   models.AgeGroup1824,
+		"25-34":   models.AgeGroup2534,
+		"35-44":   models.AgeGroup3544,
+		"45-54":   models.AgeGroup4554,
+		"55+":     models.AgeGroup55Plus,
+		"unknown": models.AgeGroupUnknown,
+	}
+
+	for _, result := range ageResults {
+		ageGroup, exists := ageGroupMap[result.AgeGroup]
+		if !exists {
+			ageGroup = models.AgeGroupUnknown
+		}
+
+		// Check if record exists
+		existing, err := s.metricsRepo.GetAgeMetricsByGroup(ctx, projectID, year, month, string(ageGroup))
+
+		ageMetrics := &models.MetricsAgeMonthly{
+			ProjectID:             projectID,
+			Year:                  year,
+			Month:                 month,
+			AgeGroup:              ageGroup,
+			Visits:                int(result.Visits),
+			Users:                 int(result.Users),
+			BounceRate:            result.BounceRate,
+			AvgSessionDurationSec: result.AvgSessionDurationSec,
 		}
 
 		if err == nil && existing != nil {
