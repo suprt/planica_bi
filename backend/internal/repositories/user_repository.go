@@ -98,3 +98,74 @@ func (r *UserRepository) IsAdmin(ctx context.Context, userID uint) (bool, error)
 	return count > 0, nil
 }
 
+// GetAll retrieves all users
+func (r *UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
+	var users []models.User
+	err := r.db.WithContext(ctx).Preload("ProjectRoles").Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// Update updates user information
+func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
+}
+
+// Delete deletes a user
+func (r *UserRepository) Delete(ctx context.Context, userID uint) error {
+	return r.db.WithContext(ctx).Delete(&models.User{}, userID).Error
+}
+
+// GetProjectUsers retrieves all users for a project with their roles
+func (r *UserRepository) GetProjectUsers(ctx context.Context, projectID uint) ([]models.UserProjectRole, error) {
+	var roles []models.UserProjectRole
+	err := r.db.WithContext(ctx).
+		Where("project_id = ?", projectID).
+		Preload("User").
+		Find(&roles).Error
+	if err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
+// AssignRole assigns a role to user in project
+// If role already exists, it will be updated
+func (r *UserRepository) AssignRole(ctx context.Context, userID, projectID uint, role string) error {
+	// Check if role already exists
+	var existing models.UserProjectRole
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projectID).
+		First(&existing).Error
+
+	if err == nil {
+		// Role exists, update it
+		existing.Role = role
+		return r.db.WithContext(ctx).Save(&existing).Error
+	}
+
+	// Role doesn't exist, create new
+	newRole := &models.UserProjectRole{
+		UserID:    userID,
+		ProjectID: projectID,
+		Role:      role,
+	}
+	return r.db.WithContext(ctx).Create(newRole).Error
+}
+
+// UpdateRole updates user's role in project
+func (r *UserRepository) UpdateRole(ctx context.Context, userID, projectID uint, role string) error {
+	return r.db.WithContext(ctx).Model(&models.UserProjectRole{}).
+		Where("user_id = ? AND project_id = ?", userID, projectID).
+		Update("role", role).Error
+}
+
+// RemoveRole removes user's role from project
+func (r *UserRepository) RemoveRole(ctx context.Context, userID, projectID uint) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projectID).
+		Delete(&models.UserProjectRole{}).Error
+}
+

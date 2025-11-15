@@ -45,6 +45,7 @@ type Config struct {
 	RedisDB       int
 
 	LogLevel string
+	LogPath  string // Path to log file (default: storage/logs/app.log)
 }
 
 // Load loads configuration from environment variables
@@ -83,6 +84,10 @@ func Load() *Config {
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 		RedisDB:       getEnvInt("REDIS_DB", 0),
+
+		// Default log path: use absolute path from working directory
+		// In Docker container, working dir is /root/, so this becomes /root/storage/logs/app.log
+		LogPath: getEnv("LOG_PATH", "/root/storage/logs/app.log"),
 	}
 }
 

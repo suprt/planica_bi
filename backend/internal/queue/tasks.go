@@ -13,6 +13,7 @@ const (
 	TypeSyncDirect      = "sync:direct"
 	TypeSyncProject     = "sync:project"
 	TypeAnalyzeMetrics  = "analyze:metrics"
+	TypeGenerateReport  = "generate:report"
 )
 
 // SyncMetricaPayload is the payload for Metrica sync task
@@ -38,6 +39,11 @@ type SyncProjectPayload struct {
 type AnalyzeMetricsPayload struct {
 	ProjectID uint     `json:"project_id"`
 	Periods   []string `json:"periods"`
+}
+
+// GenerateReportPayload is the payload for report generation task
+type GenerateReportPayload struct {
+	ProjectID uint `json:"project_id"`
 }
 
 // NewSyncMetricaTask creates a new Metrica sync task
@@ -123,6 +129,27 @@ func NewAnalyzeMetricsTask(projectID uint, periods []string) *asynq.Task {
 // ParseAnalyzeMetricsPayload parses metrics analysis task payload
 func ParseAnalyzeMetricsPayload(task *asynq.Task) (*AnalyzeMetricsPayload, error) {
 	var payload AnalyzeMetricsPayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+	return &payload, nil
+}
+
+// NewGenerateReportTask creates a new report generation task
+func NewGenerateReportTask(projectID uint) *asynq.Task {
+	payload := GenerateReportPayload{
+		ProjectID: projectID,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal payload: %v", err))
+	}
+	return asynq.NewTask(TypeGenerateReport, payloadBytes)
+}
+
+// ParseGenerateReportPayload parses report generation task payload
+func ParseGenerateReportPayload(task *asynq.Task) (*GenerateReportPayload, error) {
+	var payload GenerateReportPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}

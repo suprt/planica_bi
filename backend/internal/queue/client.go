@@ -70,6 +70,16 @@ func (c *Client) EnqueueAnalyzeMetricsTask(projectID uint, periods []string) (*a
 	)
 }
 
+// EnqueueGenerateReportTask enqueues a task to generate report
+func (c *Client) EnqueueGenerateReportTask(projectID uint) (*asynq.TaskInfo, error) {
+	task := NewGenerateReportTask(projectID)
+	return c.client.Enqueue(task,
+		asynq.MaxRetry(2),
+		asynq.Timeout(5*60*time.Second), // 5 minutes timeout for report generation
+		asynq.Queue("default"),
+	)
+}
+
 // GetRedisClient returns underlying Redis client (for worker)
 func GetRedisClient(cfg *config.Config) redis.UniversalClient {
 	return redis.NewClient(&redis.Options{

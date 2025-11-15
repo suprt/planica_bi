@@ -3,8 +3,10 @@ package queue
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hibiken/asynq"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
@@ -17,10 +19,11 @@ type Worker struct {
 	mux           *asynq.ServeMux
 	syncService   *services.SyncService
 	reportService *services.ReportService
+	cache         *cache.Cache
 }
 
 // NewWorker creates a new queue worker
-func NewWorker(cfg *config.Config, syncService *services.SyncService, reportService *services.ReportService) (*Worker, error) {
+func NewWorker(cfg *config.Config, syncService *services.SyncService, reportService *services.ReportService, cacheClient *cache.Cache) (*Worker, error) {
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
 		Password: cfg.RedisPassword,
@@ -48,6 +51,7 @@ func NewWorker(cfg *config.Config, syncService *services.SyncService, reportServ
 		mux:           mux,
 		syncService:   syncService,
 		reportService: reportService,
+		cache:         cacheClient,
 	}
 
 	// Register task handlers
@@ -62,6 +66,7 @@ func (w *Worker) registerHandlers() {
 	w.mux.HandleFunc(TypeSyncDirect, w.handleSyncDirect)
 	w.mux.HandleFunc(TypeSyncProject, w.handleSyncProject)
 	w.mux.HandleFunc(TypeAnalyzeMetrics, w.handleAnalyzeMetrics)
+	w.mux.HandleFunc(TypeGenerateReport, w.handleGenerateReport)
 }
 
 // handleSyncMetrica handles Metrica sync task
@@ -210,6 +215,54 @@ func (w *Worker) handleAnalyzeMetrics(ctx context.Context, task *asynq.Task) err
 
 	if logger.Log != nil {
 		logger.Log.Info("Metrics analysis task completed",
+			zap.Uint("project_id", payload.ProjectID),
+		)
+	}
+
+	return nil
+}
+
+// handleGenerateReport handles report generation task
+func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) error {
+	payload, err := ParseGenerateReportPayload(task)
+	if err != nil {
+		return fmt.Errorf("failed to parse payload: %w", err)
+	}
+
+	if logger.Log != nil {
+		logger.Log.Info("Processing report generation task",
+			zap.Uint("project_id", payload.ProjectID),
+		)
+	}
+
+	// Generate report
+	report, err := w.reportService.GetReport(ctx, payload.ProjectID)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Error("Failed to generate report",
+				zap.Uint("project_id", payload.ProjectID),
+				zap.Error(err),
+			)
+		}
+		return fmt.Errorf("failed to generate report: %w", err)
+	}
+
+	// Store report in cache for retrieval (using project_id as key)
+	// TTL: 1 hour - reports are regenerated periodically
+	if w.cache != nil {
+		cacheKey := fmt.Sprintf("report:project:%d", payload.ProjectID)
+		if err := w.cache.Set(cacheKey, report, time.Hour); err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to cache report",
+					zap.Uint("project_id", payload.ProjectID),
+					zap.Error(err),
+				)
+			}
+		}
+	}
+
+	if logger.Log != nil {
+		logger.Log.Info("Report generation task completed",
 			zap.Uint("project_id", payload.ProjectID),
 		)
 	}

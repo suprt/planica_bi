@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
@@ -23,7 +24,9 @@ func SetupRoutes(
 	directService handlers.DirectServiceInterface,
 	counterService handlers.CounterServiceInterface,
 	authService handlers.AuthServiceInterface,
+	userService handlers.UserServiceInterface,
 	userRepo repositories.UserRepositoryInterface,
+	cacheClient *cache.Cache,
 ) *echo.Echo {
 	e := echo.New()
 
@@ -54,10 +57,13 @@ func SetupRoutes(
 	countersHandler := handlers.NewCountersHandler(counterService)
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
-	reportHandler := handlers.NewReportHandler(reportService, queueClient)
+	reportHandler := handlers.NewReportHandler(reportService, queueClient, cacheClient)
+	reportHandler.SetProjectService(projectService) // Set project service for public reports
 	syncHandler := handlers.NewSyncHandler(queueClient)
 	oauthHandler := handlers.NewOAuthHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)
+	userHandler := handlers.NewUserHandler(userService)
+	projectUserHandler := handlers.NewProjectUserHandler(userService)
 
 	// API group
 	api := e.Group("/api")
@@ -107,6 +113,21 @@ func SetupRoutes(
 	managerRoutes.POST("/projects/:id/counters", countersHandler.AddCounter)
 	managerRoutes.POST("/projects/:id/direct-accounts", directHandler.AddDirectAccount)
 	managerRoutes.POST("/projects/:id/goals", goalsHandler.AddGoal)
+
+	// Admin panel routes (require admin role)
+	// User management
+	adminOnly.GET("/users", userHandler.GetAllUsers)
+	adminOnly.GET("/users/:id", userHandler.GetUser)
+	adminOnly.POST("/users", userHandler.CreateUser)
+	adminOnly.PUT("/users/:id", userHandler.UpdateUser)
+	adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
+	adminOnly.GET("/users/:id/projects", userHandler.GetUserProjects)
+
+	// Project user role management
+	adminOnly.GET("/projects/:id/users", projectUserHandler.GetProjectUsers)
+	adminOnly.POST("/projects/:id/users", projectUserHandler.AssignUserRole)
+	adminOnly.PUT("/projects/:id/users/:userId", projectUserHandler.UpdateUserRole)
+	adminOnly.DELETE("/projects/:id/users/:userId", projectUserHandler.RemoveUserRole)
 
 	return e
 }

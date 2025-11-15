@@ -25,7 +25,7 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize logger
-	log, err := logger.Init(cfg.AppEnv)
+	log, err := logger.Init(cfg.AppEnv, cfg.LogPath)
 	if err != nil {
 		panic("Failed to initialize logger: " + err.Error())
 	}
@@ -98,6 +98,7 @@ func main() {
 		cfg.JWTSecret,
 		time.Duration(cfg.JWTExpiry)*time.Hour,
 	)
+	userService := services.NewUserService(userRepo)
 
 	// Initialize queue client
 	queueClient, err := queue.NewClient(cfg)
@@ -107,7 +108,7 @@ func main() {
 	defer queueClient.Close()
 
 	// Initialize queue worker
-	worker, err := queue.NewWorker(cfg, syncService, reportService)
+	worker, err := queue.NewWorker(cfg, syncService, reportService, cacheClient)
 	if err != nil {
 		log.Fatal("Failed to initialize queue worker", zap.Error(err))
 	}
@@ -139,7 +140,9 @@ func main() {
 		directService,
 		counterService,
 		authService,
+		userService,
 		userRepo,
+		cacheClient,
 	)
 
 	// Setup graceful shutdown

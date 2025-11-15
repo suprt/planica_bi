@@ -38,6 +38,10 @@ services:
       REDIS_HOST: redis
     ports:
       - "${APP_PORT:-8080}:8080"
+    volumes:
+      # Mount logs directory to persist logs on host
+      # In container, working directory is /root/, so logs path is /root/storage/logs
+      - ./backend/storage/logs:/root/storage/logs
     depends_on:
       mysql:
         condition: service_healthy
