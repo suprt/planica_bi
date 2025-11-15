@@ -34,10 +34,16 @@ type Config struct {
 
 	JWTSecret string // Secret key for JWT tokens
 	JWTExpiry int    // JWT token expiry in hours (default 24)
-
 	OllamaAPIKey  string // Ollama API key for metrics analysis
 	OllamaAPIURL  string // Ollama API URL (default: https://api.ollama.com/v1)
 	OllamaModel   string // Ollama model name (default: llama3.2)
+
+	// Redis configuration
+	RedisHost     string
+	RedisPort     string
+	RedisPassword string
+	RedisDB       int
+
 
 	LogLevel string
 }
@@ -73,6 +79,15 @@ func Load() *Config {
 		OllamaAPIURL:          getEnv("OLLAMA_API_URL", "https://ollama.com/api"),
 		OllamaModel:           getEnv("OLLAMA_MODEL", "glm-4.6"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
+
+
+		RedisHost:     getEnv("REDIS_HOST", "localhost"),
+		RedisPort:     getEnv("REDIS_PORT", "6379"),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+		RedisDB:      getEnvInt("REDIS_DB", 0),
+
+		LogLevel: getEnv("LOG_LEVEL", "info"),
+
 	}
 }
 

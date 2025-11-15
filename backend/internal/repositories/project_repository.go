@@ -60,8 +60,12 @@ func (r *ProjectRepository) GetByUserID(ctx context.Context, userID uint, isAdmi
 }
 
 // Update updates a project
+// Only updates specified fields, excluding created_at and id
 func (r *ProjectRepository) Update(ctx context.Context, project *models.Project) error {
-	return r.db.WithContext(ctx).Save(project).Error
+	return r.db.WithContext(ctx).
+		Model(project).
+		Select("name", "slug", "timezone", "currency", "is_active", "updated_at").
+		Updates(project).Error
 }
 
 // Delete deletes a project

@@ -5,8 +5,10 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"go.uber.org/zap"
 )
 
 // ProjectServiceInterface defines methods for project operations
@@ -39,6 +41,14 @@ func (h *ProjectHandler) CreateProject(c echo.Context) error {
 	var project models.Project
 	if err := c.Bind(&project); err != nil {
 		return echo.NewHTTPError(400, "Invalid request body")
+	}
+
+	// Log received data for debugging
+	if logger.Log != nil {
+		logger.Log.Info("Creating project",
+			zap.String("name", project.Name),
+			zap.String("slug", project.Slug),
+		)
 	}
 
 	if err := h.projectService.CreateProject(ctx, &project); err != nil {
