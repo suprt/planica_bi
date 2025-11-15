@@ -2,7 +2,7 @@ package main
 
 import (
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
+	// "gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database" // Temporarily disabled
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/router"
 	"go.uber.org/zap"
@@ -24,21 +24,24 @@ func main() {
 		zap.String("version", "1.0.0"),
 	)
 
+	// TODO: Initialize database connection (temporarily disabled for testing)
 	// Initialize database connection
-	db, err := database.Connect(cfg)
-	if err != nil {
-		log.Fatal("Failed to connect to database", zap.Error(err))
-	}
-	defer database.Close()
+	// db, err := database.Connect(cfg)
+	// if err != nil {
+	// 	log.Fatal("Failed to connect to database", zap.Error(err))
+	// }
+	// defer database.Close()
 
-	log.Info("Database connection established")
+	// log.Info("Database connection established")
 
 	// Run migrations
-	if err := database.AutoMigrate(); err != nil {
-		log.Fatal("Failed to run migrations", zap.Error(err))
-	}
+	// if err := database.AutoMigrate(); err != nil {
+	// 	log.Fatal("Failed to run migrations", zap.Error(err))
+	// }
 
-	log.Info("Database migrations completed")
+	// log.Info("Database migrations completed")
+
+	var db interface{} = nil // Placeholder
 
 	// TODO: Initialize repositories and services
 	// For now, passing nil - will be implemented when services are ready
@@ -50,8 +53,8 @@ func main() {
 	// directService := services.NewDirectService(...)
 	// counterService := services.NewCounterService(...)
 
-	_ = db                                                // Will be used when initializing repositories
-	e := router.SetupRoutes(nil, nil, nil, nil, nil, nil) // TODO: pass actual services
+	_ = db                                                     // Will be used when initializing repositories
+	e := router.SetupRoutes(cfg, nil, nil, nil, nil, nil, nil) // TODO: pass actual services
 
 	// Start server
 	addr := ":8080"
