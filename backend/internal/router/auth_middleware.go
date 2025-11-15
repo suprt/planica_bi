@@ -12,6 +12,16 @@ import (
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 )
 
+// Context key types to avoid collisions
+type contextKey string
+
+const (
+	contextKeyUserID    contextKey = "user_id"
+	contextKeyProjectID contextKey = "project_id"
+	contextKeyUserRole  contextKey = "user_role"
+	contextKeyIsAdmin   contextKey = "is_admin"
+)
+
 // AuthMiddleware validates JWT token and sets user ID in context
 func AuthMiddleware(authService interface {
 	ValidateToken(tokenString string) (uint, error)
@@ -45,7 +55,7 @@ func AuthMiddleware(authService interface {
 			}
 
 			// Set user ID in context
-			ctx := context.WithValue(c.Request().Context(), "user_id", userID)
+			ctx := context.WithValue(c.Request().Context(), contextKeyUserID, userID)
 			c.SetRequest(c.Request().WithContext(ctx))
 			c.Set("user_id", userID)
 
@@ -72,7 +82,7 @@ func RequireProjectRole(userRepo repositories.UserRepositoryInterface, allowedRo
 			isAdmin, err := userRepo.IsAdmin(ctx, userID)
 			if err == nil && isAdmin {
 				// Set isAdmin in context for handlers
-				ctx = context.WithValue(ctx, "is_admin", true)
+				ctx = context.WithValue(ctx, contextKeyIsAdmin, true)
 				c.SetRequest(c.Request().WithContext(ctx))
 				c.Set("is_admin", true)
 				return next(c)
@@ -111,9 +121,9 @@ func RequireProjectRole(userRepo repositories.UserRepositoryInterface, allowedRo
 			}
 
 			// Set project ID and role in context
-			ctx = context.WithValue(ctx, "project_id", projectID)
-			ctx = context.WithValue(ctx, "user_role", role.Role)
-			ctx = context.WithValue(ctx, "is_admin", false)
+			ctx = context.WithValue(ctx, contextKeyProjectID, projectID)
+			ctx = context.WithValue(ctx, contextKeyUserRole, role.Role)
+			ctx = context.WithValue(ctx, contextKeyIsAdmin, false)
 			c.SetRequest(c.Request().WithContext(ctx))
 			c.Set("project_id", projectID)
 			c.Set("user_role", role.Role)
@@ -123,4 +133,3 @@ func RequireProjectRole(userRepo repositories.UserRepositoryInterface, allowedRo
 		}
 	}
 }
-

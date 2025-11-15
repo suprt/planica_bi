@@ -71,6 +71,9 @@ func SetupRoutes(
 	api.GET("/oauth/yandex", oauthHandler.InitiateAuth)
 	api.GET("/oauth/yandex/callback", oauthHandler.HandleCallback)
 
+	// Public report route (no authentication required)
+	api.GET("/public/report/:token", reportHandler.GetPublicReport)
+
 	// Protected routes (require authentication)
 	protected := api.Group("")
 	protected.Use(AuthMiddleware(authService))
