@@ -42,13 +42,15 @@ CREATE TABLE `projects` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name` LONGTEXT NOT NULL,
     `slug` VARCHAR(191) NOT NULL,
+    `public_token` VARCHAR(64) NULL,
     `timezone` VARCHAR(191) NULL DEFAULT 'Europe/Moscow',
     `currency` ENUM('RUB') NULL DEFAULT 'RUB',
     `is_active` TINYINT(1) NULL DEFAULT 1,
     `created_at` DATETIME(3) NULL,
     `updated_at` DATETIME(3) NULL,
     PRIMARY KEY (`id`),
-    UNIQUE INDEX `uq_slug` (`slug` ASC)
+    UNIQUE INDEX `uq_slug` (`slug` ASC),
+    UNIQUE INDEX `uq_public_token` (`public_token` ASC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица пользователей

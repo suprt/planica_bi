@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cron"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
@@ -51,13 +52,21 @@ func main() {
 
 	log.Info("Database migrations completed")
 
+	// Initialize cache
+	cacheClient, err := cache.NewCache(cfg)
+	if err != nil {
+		log.Fatal("Failed to initialize cache", zap.Error(err))
+	}
+	defer cacheClient.Close()
+	log.Info("Cache connection established")
+
 	// Initialize repositories
 	projectRepo := repositories.NewProjectRepository(db)
 	userRepo := repositories.NewUserRepository(db)
 	metricsRepo := repositories.NewMetricsRepository(db)
-	directRepo := repositories.NewDirectRepository(db)
-	counterRepo := repositories.NewCounterRepository(db)
-	goalRepo := repositories.NewGoalRepository(db)
+	directRepo := repositories.NewDirectRepository(db, cacheClient)
+	counterRepo := repositories.NewCounterRepository(db, cacheClient) // Cached - only changes on manual admin actions
+	goalRepo := repositories.NewGoalRepository(db, cacheClient)
 	seoRepo := repositories.NewSEORepository(db)
 
 	// Initialize integration clients
