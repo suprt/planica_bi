@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 DROP TABLE IF EXISTS `user_project_roles`;
 DROP TABLE IF EXISTS `users`;

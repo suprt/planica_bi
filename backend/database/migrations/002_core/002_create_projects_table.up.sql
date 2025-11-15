@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 CREATE TABLE `projects` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

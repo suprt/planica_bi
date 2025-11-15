@@ -1,4 +1,8 @@
-USE `planica_bi`;
+USE `reports`;
+
+-- Установка кодировки UTF-8
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 
 -- Таблица для отслеживания миграций
 CREATE TABLE IF NOT EXISTS `schema_migrations` (
@@ -7,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `schema_migrations` (
     `description` TEXT NOT NULL,
     `checksum` VARCHAR(64) NOT NULL,
     `applied_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `applied_by` VARCHAR(255) NOT NULL DEFAULT USER(),
+    `applied_by` VARCHAR(255) NOT NULL DEFAULT (CURRENT_USER()),
     `execution_time_ms` INT UNSIGNED,
     `status` ENUM('pending', 'success', 'failed', 'rolled_back') NOT NULL DEFAULT 'success',
     PRIMARY KEY (`id`),
@@ -25,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `schema_audit` (
     `object_name` VARCHAR(255) NOT NULL,
     `sql_statement` TEXT NULL,
     `changed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `changed_by` VARCHAR(255) NOT NULL DEFAULT USER(),
+    `changed_by` VARCHAR(255) NOT NULL DEFAULT (CURRENT_USER()),
     PRIMARY KEY (`id`),
     INDEX `idx_change_type` (`change_type` ASC),
     INDEX `idx_object_type` (`object_type` ASC),
@@ -33,35 +37,19 @@ CREATE TABLE IF NOT EXISTS `schema_audit` (
     INDEX `idx_migration` (`migration_version` ASC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Таблица проектов
+-- Таблица проектов (соответствует GORM модели)
 CREATE TABLE `projects` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `uuid` CHAR(36) NOT NULL DEFAULT (UUID()),
-    `name` VARCHAR(255) NOT NULL,
-    `slug` VARCHAR(100) NOT NULL,
-    `description` TEXT NULL,
-    `timezone` VARCHAR(50) NOT NULL DEFAULT 'Europe/Moscow',
-    `currency` ENUM('RUB', 'USD', 'EUR') NOT NULL DEFAULT 'RUB',
-    `language` ENUM('ru', 'en') NOT NULL DEFAULT 'ru',
-    `status` ENUM('active', 'paused', 'archived') NOT NULL DEFAULT 'active',
-    `is_public` TINYINT(1) NOT NULL DEFAULT 0,
-    `start_date` DATE NULL,
-    `end_date` DATE NULL,
-    `created_by` BIGINT UNSIGNED NULL,
-    `updated_by` BIGINT UNSIGNED NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted_at` TIMESTAMP NULL,
+    `name` LONGTEXT NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `timezone` VARCHAR(191) NULL DEFAULT 'Europe/Moscow',
+    `currency` ENUM('RUB') NULL DEFAULT 'RUB',
+    `is_active` TINYINT(1) NULL DEFAULT 1,
+    `created_at` DATETIME(3) NULL,
+    `updated_at` DATETIME(3) NULL,
     PRIMARY KEY (`id`),
-    UNIQUE INDEX `uq_uuid` (`uuid` ASC),
-    UNIQUE INDEX `uq_slug` (`slug` ASC),
-    INDEX `idx_status` (`status` ASC),
-    INDEX `idx_public` (`is_public` ASC),
-    INDEX `idx_created_at` (`created_at` ASC),
-    INDEX `idx_dates` (`start_date` ASC, `end_date` ASC),
-    INDEX `idx_deleted` (`deleted_at` ASC),
-    CONSTRAINT `chk_dates` CHECK (`end_date` IS NULL OR `start_date` IS NULL OR `end_date` > `start_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+    UNIQUE INDEX `uq_slug` (`slug` ASC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица пользователей
 CREATE TABLE `users` (

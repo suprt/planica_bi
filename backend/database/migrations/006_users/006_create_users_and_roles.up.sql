@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- Таблица пользователей согласно ТЗ (раздел 7)
 CREATE TABLE `users` (

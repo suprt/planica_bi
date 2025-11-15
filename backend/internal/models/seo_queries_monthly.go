@@ -14,3 +14,8 @@ type SEOQueriesMonthly struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
+// TableName specifies the table name for SEOQueriesMonthly
+func (SEOQueriesMonthly) TableName() string {
+	return "seo_queries_monthly"
+}
+

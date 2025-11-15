@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- SEO данные
 INSERT INTO `seo_queries_monthly` (`project_id`, `year`, `month`, `query`, `position`, `url`, `impressions`, `clicks`) VALUES 

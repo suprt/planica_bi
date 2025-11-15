@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- Яндекс.Метрика счетчики
 INSERT INTO `yandex_counters` (`project_id`, `counter_id`, `name`, `site_name`, `is_primary`, `status`) VALUES 

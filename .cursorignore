@@ -1,0 +1,39 @@
+# Cursor ignore file
+# Files and patterns to ignore in Cursor
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+*.obj
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Note: .env files are NOT ignored - they are needed for configuration
+# Explicitly allow .env files
+!.env
+!**/.env
+!**/*.env
+

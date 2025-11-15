@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 DROP TABLE IF EXISTS `goals`;
 DROP TABLE IF EXISTS `direct_campaigns`;

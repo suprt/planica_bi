@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- Основные метрики Метрики (помесячно) согласно ТЗ
 CREATE TABLE `metrics_monthly` (

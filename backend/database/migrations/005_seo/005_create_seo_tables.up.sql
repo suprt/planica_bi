@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- SEO данные согласно ТЗ (разделы 1.2, 4.1 и 8)
 CREATE TABLE `seo_queries_monthly` (

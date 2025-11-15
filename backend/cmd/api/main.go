@@ -1,10 +1,15 @@
 package main
 
 import (
+	"time"
+
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	// "gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database" // Temporarily disabled
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/integrations"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/router"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -24,43 +29,73 @@ func main() {
 		zap.String("version", "1.0.0"),
 	)
 
-	// TODO: Initialize database connection (temporarily disabled for testing)
 	// Initialize database connection
-	// db, err := database.Connect(cfg)
-	// if err != nil {
-	// 	log.Fatal("Failed to connect to database", zap.Error(err))
-	// }
-	// defer database.Close()
+	db, err := database.Connect(cfg)
+	if err != nil {
+		log.Fatal("Failed to connect to database", zap.Error(err))
+	}
+	defer database.Close()
 
-	// log.Info("Database connection established")
+	log.Info("Database connection established")
 
 	// Run migrations
-	// if err := database.AutoMigrate(); err != nil {
-	// 	log.Fatal("Failed to run migrations", zap.Error(err))
-	// }
+	if err := database.AutoMigrate(); err != nil {
+		log.Fatal("Failed to run migrations", zap.Error(err))
+	}
 
-	// log.Info("Database migrations completed")
+	log.Info("Database migrations completed")
 
-	var db interface{} = nil // Placeholder
+	// Initialize repositories
+	projectRepo := repositories.NewProjectRepository(db)
+	userRepo := repositories.NewUserRepository(db)
+	metricsRepo := repositories.NewMetricsRepository(db)
+	directRepo := repositories.NewDirectRepository(db)
+	counterRepo := repositories.NewCounterRepository(db)
+	goalRepo := repositories.NewGoalRepository(db)
+	seoRepo := repositories.NewSEORepository(db)
 
-	// TODO: Initialize repositories and services
-	// For now, passing nil - will be implemented when services are ready
-	// projectRepo := repositories.NewProjectRepository(db)
-	// projectService := services.NewProjectService(projectRepo)
-	// reportService := services.NewReportService(...)
-	// syncService := services.NewSyncService(...)
-	// goalService := services.NewGoalService(...)
-	// directService := services.NewDirectService(...)
-	// counterService := services.NewCounterService(...)
+	// Initialize integration clients
+	// Note: OAuth token may be empty initially, clients will handle this
+	metricaClient := integrations.NewYandexMetricaClient(cfg.YandexOAuthToken)
+	directClient := integrations.NewYandexDirectClient(
+		cfg.YandexOAuthToken,
+		"", // clientLogin will be set per project
+		cfg.YandexDirectSandbox,
+	)
 
-	_ = db // Will be used when initializing repositories
+	// Initialize services
+	projectService := services.NewProjectService(projectRepo)
+	reportService := services.NewReportService(metricsRepo, directRepo, seoRepo)
+	syncService := services.NewSyncService(
+		projectRepo,
+		metricsRepo,
+		directRepo,
+		counterRepo,
+		goalRepo,
+		metricaClient,
+		directClient,
+	)
+	goalService := services.NewGoalService(goalRepo, counterRepo)
+	directService := services.NewDirectService(directRepo)
+	counterService := services.NewCounterService(counterRepo)
+	authService := services.NewAuthService(
+		userRepo,
+		cfg.JWTSecret,
+		time.Duration(cfg.JWTExpiry)*time.Hour,
+	)
 
-	// TODO: Initialize repositories and services when database is enabled
-	// userRepo := repositories.NewUserRepository(db)
-	// authService := services.NewAuthService(userRepo, cfg.JWTSecret, time.Duration(cfg.JWTExpiry)*time.Hour)
-
-	// For now, passing nil - will be implemented when database is enabled
-	e := router.SetupRoutes(cfg, nil, nil, nil, nil, nil, nil, nil, nil) // TODO: pass actual services including authService and userRepo
+	// Setup routes
+	e := router.SetupRoutes(
+		cfg,
+		projectService,
+		reportService,
+		syncService,
+		goalService,
+		directService,
+		counterService,
+		authService,
+		userRepo,
+	)
 
 	// Start server
 	addr := ":8080"

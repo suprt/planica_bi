@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- Вставка тестовых проектов
 INSERT INTO `projects` (`name`, `slug`, `description`, `timezone`, `currency`, `status`, `is_public`) VALUES 

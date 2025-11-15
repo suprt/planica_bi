@@ -16,14 +16,19 @@ const (
 
 // MetricsAgeMonthly represents monthly metrics broken down by age group
 type MetricsAgeMonthly struct {
-	ID                    uint     `gorm:"primaryKey"`
-	ProjectID             uint     `gorm:"not null;index"`
-	Year                  int      `gorm:"not null;index"`
-	Month                 int      `gorm:"not null;index"`
-	AgeGroup              AgeGroup `gorm:"type:varchar(20);not null"`
-	Visits                int      `gorm:"not null;default:0"`
-	Users                 int      `gorm:"not null;default:0"`
-	BounceRate            float64  `gorm:"type:decimal(5,2)"`
-	AvgSessionDurationSec int      `gorm:"not null;default:0"`
+	ID                    uint      `gorm:"primaryKey"`
+	ProjectID             uint      `gorm:"not null;index"`
+	Year                  int       `gorm:"not null;index"`
+	Month                 int       `gorm:"not null;index"`
+	AgeGroup              AgeGroup  `gorm:"type:varchar(20);not null"`
+	Visits                int       `gorm:"not null;default:0"`
+	Users                 int       `gorm:"not null;default:0"`
+	BounceRate            float64   `gorm:"type:decimal(5,2)"`
+	AvgSessionDurationSec int       `gorm:"not null;default:0"`
 	CreatedAt             time.Time `gorm:"autoCreateTime"`
+}
+
+// TableName specifies the table name for MetricsAgeMonthly
+func (MetricsAgeMonthly) TableName() string {
+	return "metrics_age_monthly"
 }

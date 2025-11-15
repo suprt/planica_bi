@@ -1,4 +1,4 @@
-USE `planica_bi`;
+USE `reports`;
 
 -- Таблица счетчиков Яндекс.Метрики
 CREATE TABLE `yandex_counters` (

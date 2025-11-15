@@ -4,11 +4,11 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
 
 -- Создание базы данных
-CREATE DATABASE IF NOT EXISTS `planica_bi` 
+CREATE DATABASE IF NOT EXISTS `reports` 
 DEFAULT CHARACTER SET utf8mb4 
 COLLATE utf8mb4_unicode_ci;
 
-USE `planica_bi`;
+USE `reports`;
 
 -- Таблица для отслеживания миграций
 CREATE TABLE IF NOT EXISTS `schema_migrations` (
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `schema_audit` (
 
 -- Запись в аудит о создании базы
 INSERT INTO `schema_audit` (`change_type`, `object_type`, `object_name`, `sql_statement`) 
-VALUES ('CREATE', 'DATABASE', 'planica_bi', 'Database initialization');
+VALUES ('CREATE', 'DATABASE', 'reports', 'Database initialization');
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
