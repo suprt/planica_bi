@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cron"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/integrations"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/router"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
@@ -84,12 +90,42 @@ func main() {
 		time.Duration(cfg.JWTExpiry)*time.Hour,
 	)
 
-	// Setup routes
+	// Initialize queue client
+	queueClient, err := queue.NewClient(cfg)
+	if err != nil {
+		log.Fatal("Failed to initialize queue client", zap.Error(err))
+	}
+	defer queueClient.Close()
+
+	// Initialize queue worker
+	worker, err := queue.NewWorker(cfg, syncService)
+	if err != nil {
+		log.Fatal("Failed to initialize queue worker", zap.Error(err))
+	}
+
+	// Start worker in background
+	go func() {
+		log.Info("Queue worker starting")
+		if err := worker.Start(); err != nil {
+			log.Fatal("Queue worker failed to start", zap.Error(err))
+		}
+	}()
+
+	// Initialize cron scheduler
+	scheduler := cron.NewScheduler(queueClient, projectRepo)
+	scheduler.StartDailySync()
+	scheduler.StartMonthlyFinalization()
+	scheduler.Start()
+	defer scheduler.Stop()
+
+	log.Info("Cron scheduler initialized and started")
+
+	// Setup routes (pass queueClient instead of syncService)
 	e := router.SetupRoutes(
 		cfg,
 		projectService,
 		reportService,
-		syncService,
+		queueClient,
 		goalService,
 		directService,
 		counterService,
@@ -97,10 +133,32 @@ func main() {
 		userRepo,
 	)
 
-	// Start server
-	addr := ":8080"
-	log.Info("Server starting", zap.String("address", addr))
-	if err := e.Start(addr); err != nil {
-		log.Fatal("Server failed to start", zap.Error(err))
+	// Setup graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in goroutine
+	go func() {
+		addr := ":8080"
+		log.Info("Server starting", zap.String("address", addr))
+		if err := e.Start(addr); err != nil {
+			log.Fatal("Server failed to start", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal
+	<-quit
+	log.Info("Shutting down server...")
+
+	// Graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		log.Error("Server forced to shutdown", zap.Error(err))
 	}
+
+	// Shutdown worker
+	worker.Shutdown()
+	log.Info("Server exited")
 }
