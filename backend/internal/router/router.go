@@ -8,6 +8,7 @@ import (
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 )
 
@@ -17,7 +18,7 @@ func SetupRoutes(
 	cfg *config.Config,
 	projectService handlers.ProjectServiceInterface,
 	reportService handlers.ReportServiceInterface,
-	syncService handlers.SyncServiceInterface,
+	queueClient *queue.Client,
 	goalService handlers.GoalServiceInterface,
 	directService handlers.DirectServiceInterface,
 	counterService handlers.CounterServiceInterface,
@@ -29,6 +30,15 @@ func SetupRoutes(
 	// Middleware
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+	
+	// UTF-8 encoding middleware for responses
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Set UTF-8 charset for JSON responses
+			c.Response().Header().Set("Content-Type", "application/json; charset=utf-8")
+			return next(c)
+		}
+	})
 
 	// Set request timeout (30 seconds)
 	e.Use(timeoutMiddleware(30 * time.Second))
@@ -45,7 +55,7 @@ func SetupRoutes(
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
 	reportHandler := handlers.NewReportHandler(reportService)
-	syncHandler := handlers.NewSyncHandler(syncService)
+	syncHandler := handlers.NewSyncHandler(queueClient)
 	oauthHandler := handlers.NewOAuthHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)
 

@@ -62,20 +62,21 @@ func (s *SyncService) SyncProject(ctx context.Context, projectID uint) error {
 	currentMonth := int(now.Month())
 
 	// Sync Yandex.Metrica data
-	if err := s.syncMetricaData(ctx, projectID, currentYear, currentMonth); err != nil {
+	if err := s.SyncMetricaData(ctx, projectID, currentYear, currentMonth); err != nil {
 		return fmt.Errorf("failed to sync Metrica data: %w", err)
 	}
 
 	// Sync Yandex.Direct data
-	if err := s.syncDirectData(ctx, projectID, currentYear, currentMonth); err != nil {
+	if err := s.SyncDirectData(ctx, projectID, currentYear, currentMonth); err != nil {
 		return fmt.Errorf("failed to sync Direct data: %w", err)
 	}
 
 	return nil
 }
 
-// syncMetricaData synchronizes Yandex.Metrica data for a project
-func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year, month int) error {
+// SyncMetricaData synchronizes Yandex.Metrica data for a project
+// Made public for use by queue workers
+func (s *SyncService) SyncMetricaData(ctx context.Context, projectID uint, year, month int) error {
 	// Get all counters for the project
 	counters, err := s.counterRepo.GetByProjectID(ctx, projectID)
 	if err != nil {
@@ -214,8 +215,9 @@ func (s *SyncService) syncMetricaData(ctx context.Context, projectID uint, year,
 	return s.metricsRepo.SaveMonthlyMetrics(monthlyMetrics)
 }
 
-// syncDirectData synchronizes Yandex.Direct data for a project
-func (s *SyncService) syncDirectData(ctx context.Context, projectID uint, year, month int) error {
+// SyncDirectData synchronizes Yandex.Direct data for a project
+// Made public for use by queue workers
+func (s *SyncService) SyncDirectData(ctx context.Context, projectID uint, year, month int) error {
 	// Get all Direct accounts for the project
 	accounts, err := s.directRepo.GetAccountsByProjectID(ctx, projectID)
 	if err != nil {
@@ -365,7 +367,7 @@ func (s *SyncService) FinalizeMonth(ctx context.Context) error {
 		}
 
 		// Sync data for previous month to ensure it's finalized
-		if err := s.syncMetricaData(ctx, project.ID, year, month); err != nil {
+		if err := s.SyncMetricaData(ctx, project.ID, year, month); err != nil {
 			// Log error but continue
 			if logger.Log != nil {
 				logger.Log.Error("Failed to finalize Metrica data",
@@ -378,7 +380,7 @@ func (s *SyncService) FinalizeMonth(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.syncDirectData(ctx, project.ID, year, month); err != nil {
+		if err := s.SyncDirectData(ctx, project.ID, year, month); err != nil {
 			// Log error but continue
 			if logger.Log != nil {
 				logger.Log.Error("Failed to finalize Direct data",
