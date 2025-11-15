@@ -18,6 +18,7 @@ type ProjectServiceInterface interface {
 	GetAllProjects(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error)
 	UpdateProject(ctx context.Context, project *models.Project) error
 	DeleteProject(ctx context.Context, id uint) error
+	GetProjectByPublicToken(ctx context.Context, token string) (*models.Project, error)
 }
 
 // ProjectHandler handles HTTP requests for projects

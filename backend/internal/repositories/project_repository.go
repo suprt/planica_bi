@@ -64,11 +64,21 @@ func (r *ProjectRepository) GetByUserID(ctx context.Context, userID uint, isAdmi
 func (r *ProjectRepository) Update(ctx context.Context, project *models.Project) error {
 	return r.db.WithContext(ctx).
 		Model(project).
-		Select("name", "slug", "timezone", "currency", "is_active", "updated_at").
+		Select("name", "slug", "public_token", "timezone", "currency", "is_active", "updated_at").
 		Updates(project).Error
 }
 
 // Delete deletes a project
 func (r *ProjectRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&models.Project{}, id).Error
+}
+
+// GetByPublicToken retrieves a project by public token
+func (r *ProjectRepository) GetByPublicToken(ctx context.Context, token string) (*models.Project, error) {
+	var project models.Project
+	err := r.db.WithContext(ctx).Where("public_token = ?", token).First(&project).Error
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
 }

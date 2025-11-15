@@ -20,13 +20,15 @@ type ReportServiceInterface interface {
 
 // ReportHandler handles HTTP requests for reports
 type ReportHandler struct {
-	reportService ReportServiceInterface
+	reportService  ReportServiceInterface
+	projectService ProjectServiceInterface
 }
 
 // NewReportHandler creates a new report handler
-func NewReportHandler(reportService ReportServiceInterface) *ReportHandler {
+func NewReportHandler(reportService ReportServiceInterface, projectService ProjectServiceInterface) *ReportHandler {
 	return &ReportHandler{
-		reportService: reportService,
+		reportService:  reportService,
+		projectService: projectService,
 	}
 }
 
@@ -45,6 +47,36 @@ func (h *ReportHandler) GetReport(c echo.Context) error {
 		return err
 	}
 
+	return c.JSON(200, report)
+}
+
+// GetPublicReport handles GET /api/public/report/{token}
+// Returns JSON with report data for 3 months (M, M-1, M-2) without authentication
+func (h *ReportHandler) GetPublicReport(c echo.Context) error {
+	ctx := c.Request().Context()
+	token := c.Param("token")
+
+	if token == "" {
+		return echo.NewHTTPError(400, "Token is required")
+	}
+
+	// Get project by public token
+	project, err := h.projectService.GetProjectByPublicToken(ctx, token)
+	if err != nil {
+		return echo.NewHTTPError(404, "Report not found")
+	}
+
+	// Check if project is active
+	if !project.IsActive {
+		return echo.NewHTTPError(404, "Report not found")
+	}
+
+	// Get report for the project
+	report, err := h.reportService.GetReport(ctx, project.ID)
+	
+	if err != nil {
+		return err
+	}
 	return c.JSON(200, report)
 }
 
@@ -71,9 +103,7 @@ func (h *ReportHandler) GetChannelMetrics(c echo.Context) error {
 	}
 
 	output, err := h.reportService.GetChannelMetrics(ctx, uint(id), periods)
-	if err != nil {
-		return err
-	}
+
 
 	return c.JSON(200, output)
 }
@@ -113,4 +143,5 @@ func (h *ReportHandler) AnalyzeChannelMetrics(c echo.Context) error {
 	}
 
 	return c.JSON(200, analysis)
+>>>>>>> backend/internal/handlers/report_handler.go
 }
