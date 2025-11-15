@@ -18,4 +18,3 @@ type UserServiceInterface interface {
 	UpdateRole(ctx context.Context, userID, projectID uint, role string) error
 	RemoveRole(ctx context.Context, userID, projectID uint) error
 }
-

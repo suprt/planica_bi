@@ -41,11 +41,11 @@ type UpdateUserRequest struct {
 
 // UserResponse represents user data for API responses (without password)
 type UserResponse struct {
-	ID       uint                   `json:"id"`
-	Name     string                 `json:"name"`
-	Email    string                 `json:"email"`
-	IsActive bool                   `json:"is_active"`
-	Projects []UserProjectResponse  `json:"projects,omitempty"`
+	ID       uint                  `json:"id"`
+	Name     string                `json:"name"`
+	Email    string                `json:"email"`
+	IsActive bool                  `json:"is_active"`
+	Projects []UserProjectResponse `json:"projects,omitempty"`
 }
 
 // UserProjectResponse represents user's project and role
@@ -249,8 +249,8 @@ func (s *UserService) GetProjectUsers(ctx context.Context, projectID uint) ([]Us
 			IsActive: pr.User.IsActive,
 			Projects: []UserProjectResponse{
 				{
-					ProjectID:   pr.ProjectID,
-					Role:        pr.Role,
+					ProjectID: pr.ProjectID,
+					Role:      pr.Role,
 				},
 			},
 		}
@@ -304,4 +304,3 @@ func (s *UserService) RemoveRole(ctx context.Context, userID, projectID uint) er
 
 	return nil
 }
-
