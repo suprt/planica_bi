@@ -9,9 +9,10 @@ import (
 
 // Task type names
 const (
-	TypeSyncMetrica = "sync:metrica"
-	TypeSyncDirect  = "sync:direct"
-	TypeSyncProject = "sync:project"
+	TypeSyncMetrica     = "sync:metrica"
+	TypeSyncDirect      = "sync:direct"
+	TypeSyncProject     = "sync:project"
+	TypeAnalyzeMetrics  = "analyze:metrics"
 )
 
 // SyncMetricaPayload is the payload for Metrica sync task
@@ -31,6 +32,12 @@ type SyncDirectPayload struct {
 // SyncProjectPayload is the payload for project sync task
 type SyncProjectPayload struct {
 	ProjectID uint `json:"project_id"`
+}
+
+// AnalyzeMetricsPayload is the payload for metrics analysis task
+type AnalyzeMetricsPayload struct {
+	ProjectID uint     `json:"project_id"`
+	Periods   []string `json:"periods"`
 }
 
 // NewSyncMetricaTask creates a new Metrica sync task
@@ -94,6 +101,28 @@ func ParseSyncDirectPayload(task *asynq.Task) (*SyncDirectPayload, error) {
 // ParseSyncProjectPayload parses project sync task payload
 func ParseSyncProjectPayload(task *asynq.Task) (*SyncProjectPayload, error) {
 	var payload SyncProjectPayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+	return &payload, nil
+}
+
+// NewAnalyzeMetricsTask creates a new metrics analysis task
+func NewAnalyzeMetricsTask(projectID uint, periods []string) *asynq.Task {
+	payload := AnalyzeMetricsPayload{
+		ProjectID: projectID,
+		Periods:   periods,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal payload: %v", err))
+	}
+	return asynq.NewTask(TypeAnalyzeMetrics, payloadBytes)
+}
+
+// ParseAnalyzeMetricsPayload parses metrics analysis task payload
+func ParseAnalyzeMetricsPayload(task *asynq.Task) (*AnalyzeMetricsPayload, error) {
+	var payload AnalyzeMetricsPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}

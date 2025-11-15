@@ -54,7 +54,7 @@ func SetupRoutes(
 	countersHandler := handlers.NewCountersHandler(counterService)
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
-	reportHandler := handlers.NewReportHandler(reportService, projectService)
+	reportHandler := handlers.NewReportHandler(reportService, queueClient)
 	syncHandler := handlers.NewSyncHandler(queueClient)
 	oauthHandler := handlers.NewOAuthHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)
