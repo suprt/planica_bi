@@ -123,4 +123,3 @@ func RequireProjectRole(userRepo repositories.UserRepositoryInterface, allowedRo
 		}
 	}
 }
-
