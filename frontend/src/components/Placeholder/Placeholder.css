@@ -1,0 +1,20 @@
+.content-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    opacity: 0.7;
+}
+
+.content-placeholder h2 {
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.content-placeholder p {
+    color: var(--text-secondary);
+}
+
