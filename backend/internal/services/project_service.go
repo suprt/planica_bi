@@ -45,6 +45,24 @@ func (s *ProjectService) GetAllProjects(ctx context.Context, userID uint, isAdmi
 	return s.projectRepo.GetByUserID(ctx, userID, isAdmin)
 }
 
+// GetAllActiveProjects retrieves all active projects (for system tasks like cron)
+func (s *ProjectService) GetAllActiveProjects(ctx context.Context) ([]*models.Project, error) {
+	allProjects, err := s.projectRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter only active projects
+	var activeProjects []*models.Project
+	for _, project := range allProjects {
+		if project.IsActive {
+			activeProjects = append(activeProjects, project)
+		}
+	}
+
+	return activeProjects, nil
+}
+
 // UpdateProject updates a project
 func (s *ProjectService) UpdateProject(ctx context.Context, project *models.Project) error {
 	// Validate required fields

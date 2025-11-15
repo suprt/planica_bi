@@ -13,13 +13,14 @@ import (
 
 // Worker handles task processing
 type Worker struct {
-	server      *asynq.Server
-	mux         *asynq.ServeMux
-	syncService *services.SyncService
+	server        *asynq.Server
+	mux           *asynq.ServeMux
+	syncService   *services.SyncService
+	reportService *services.ReportService
 }
 
 // NewWorker creates a new queue worker
-func NewWorker(cfg *config.Config, syncService *services.SyncService) (*Worker, error) {
+func NewWorker(cfg *config.Config, syncService *services.SyncService, reportService *services.ReportService) (*Worker, error) {
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
 		Password: cfg.RedisPassword,
@@ -43,9 +44,10 @@ func NewWorker(cfg *config.Config, syncService *services.SyncService) (*Worker, 
 	mux := asynq.NewServeMux()
 
 	worker := &Worker{
-		server:      server,
-		mux:         mux,
-		syncService: syncService,
+		server:        server,
+		mux:           mux,
+		syncService:   syncService,
+		reportService: reportService,
 	}
 
 	// Register task handlers
@@ -59,6 +61,7 @@ func (w *Worker) registerHandlers() {
 	w.mux.HandleFunc(TypeSyncMetrica, w.handleSyncMetrica)
 	w.mux.HandleFunc(TypeSyncDirect, w.handleSyncDirect)
 	w.mux.HandleFunc(TypeSyncProject, w.handleSyncProject)
+	w.mux.HandleFunc(TypeAnalyzeMetrics, w.handleAnalyzeMetrics)
 }
 
 // handleSyncMetrica handles Metrica sync task
@@ -160,6 +163,53 @@ func (w *Worker) handleSyncProject(ctx context.Context, task *asynq.Task) error 
 
 	if logger.Log != nil {
 		logger.Log.Info("Project sync task completed",
+			zap.Uint("project_id", payload.ProjectID),
+		)
+	}
+
+	return nil
+}
+
+// handleAnalyzeMetrics handles metrics analysis task
+func (w *Worker) handleAnalyzeMetrics(ctx context.Context, task *asynq.Task) error {
+	payload, err := ParseAnalyzeMetricsPayload(task)
+	if err != nil {
+		return fmt.Errorf("failed to parse payload: %w", err)
+	}
+
+	if logger.Log != nil {
+		logger.Log.Info("Processing metrics analysis task",
+			zap.Uint("project_id", payload.ProjectID),
+			zap.Strings("periods", payload.Periods),
+		)
+	}
+
+	// Get channel metrics data
+	metricsData, err := w.reportService.GetChannelMetrics(ctx, payload.ProjectID, payload.Periods)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Error("Failed to get channel metrics",
+				zap.Uint("project_id", payload.ProjectID),
+				zap.Error(err),
+			)
+		}
+		return fmt.Errorf("failed to get channel metrics: %w", err)
+	}
+
+	// Analyze metrics using AI
+	_, err = w.reportService.AnalyzeChannelMetrics(ctx, metricsData)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Error("Failed to analyze metrics",
+				zap.Uint("project_id", payload.ProjectID),
+				zap.Error(err),
+			)
+		}
+		return fmt.Errorf("failed to analyze metrics: %w", err)
+	}
+
+	if logger.Log != nil {
+		logger.Log.Info("Metrics analysis task completed",
 			zap.Uint("project_id", payload.ProjectID),
 		)
 	}

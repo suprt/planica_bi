@@ -7,19 +7,19 @@ import (
 	"github.com/robfig/cron/v3"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
 // Scheduler handles scheduled tasks using cron
 type Scheduler struct {
-	cron        *cron.Cron
-	queueClient *queue.Client
-	projectRepo *repositories.ProjectRepository
+	cron           *cron.Cron
+	queueClient    *queue.Client
+	projectService *services.ProjectService
 }
 
 // NewScheduler creates a new scheduler
-func NewScheduler(queueClient *queue.Client, projectRepo *repositories.ProjectRepository) *Scheduler {
+func NewScheduler(queueClient *queue.Client, projectService *services.ProjectService) *Scheduler {
 	// Create cron with timezone support (MSK = Europe/Moscow)
 	loc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
@@ -33,9 +33,9 @@ func NewScheduler(queueClient *queue.Client, projectRepo *repositories.ProjectRe
 	c := cron.New(cron.WithLocation(loc), cron.WithSeconds())
 
 	return &Scheduler{
-		cron:        c,
-		queueClient: queueClient,
-		projectRepo: projectRepo,
+		cron:           c,
+		queueClient:    queueClient,
+		projectService: projectService,
 	}
 }
 
@@ -101,7 +101,7 @@ func (s *Scheduler) runDailySync() {
 	}
 
 	ctx := context.Background()
-	projects, err := s.projectRepo.GetAll(ctx)
+	projects, err := s.projectService.GetAllActiveProjects(ctx)
 	if err != nil {
 		if logger.Log != nil {
 			logger.Log.Error("Failed to get projects for daily sync", zap.Error(err))
@@ -117,9 +117,6 @@ func (s *Scheduler) runDailySync() {
 	errorCount := 0
 
 	for _, project := range projects {
-		if !project.IsActive {
-			continue
-		}
 
 		// Enqueue sync task for each project
 		_, err := s.queueClient.EnqueueSyncProjectTask(project.ID)
@@ -160,7 +157,7 @@ func (s *Scheduler) runMonthlyFinalization() {
 	}
 
 	ctx := context.Background()
-	projects, err := s.projectRepo.GetAll(ctx)
+	projects, err := s.projectService.GetAllActiveProjects(ctx)
 	if err != nil {
 		if logger.Log != nil {
 			logger.Log.Error("Failed to get projects for monthly finalization", zap.Error(err))
@@ -178,9 +175,6 @@ func (s *Scheduler) runMonthlyFinalization() {
 	errorCount := 0
 
 	for _, project := range projects {
-		if !project.IsActive {
-			continue
-		}
 
 		// Enqueue sync tasks for previous month
 		_, err := s.queueClient.EnqueueSyncMetricaTask(project.ID, year, month)

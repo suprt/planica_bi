@@ -98,7 +98,7 @@ func main() {
 	defer queueClient.Close()
 
 	// Initialize queue worker
-	worker, err := queue.NewWorker(cfg, syncService)
+	worker, err := queue.NewWorker(cfg, syncService, reportService)
 	if err != nil {
 		log.Fatal("Failed to initialize queue worker", zap.Error(err))
 	}
@@ -112,7 +112,7 @@ func main() {
 	}()
 
 	// Initialize cron scheduler
-	scheduler := cron.NewScheduler(queueClient, projectRepo)
+	scheduler := cron.NewScheduler(queueClient, projectService)
 	scheduler.StartDailySync()
 	scheduler.StartMonthlyFinalization()
 	scheduler.Start()

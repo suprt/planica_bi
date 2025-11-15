@@ -30,7 +30,7 @@ func SetupRoutes(
 	// Middleware
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
-	
+
 	// UTF-8 encoding middleware for responses
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -54,7 +54,7 @@ func SetupRoutes(
 	countersHandler := handlers.NewCountersHandler(counterService)
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
-	reportHandler := handlers.NewReportHandler(reportService)
+	reportHandler := handlers.NewReportHandler(reportService, queueClient)
 	syncHandler := handlers.NewSyncHandler(queueClient)
 	oauthHandler := handlers.NewOAuthHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)

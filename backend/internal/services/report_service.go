@@ -385,16 +385,16 @@ func (s *ReportService) GetChannelMetrics(ctx context.Context, projectID uint, p
 		if metrics != nil {
 			// For Metrica, we don't have CPC/CPA directly, so we'll use 0 or calculate from other data
 			// Metrica doesn't have impressions/clicks in the same way, so we'll use visits/users
-			mkMetrics.CPC = append(mkMetrics.CPC, 0) // Metrica doesn't have CPC
+			mkMetrics.CPC = append(mkMetrics.CPC, 0)                              // Metrica doesn't have CPC
 			mkMetrics.Impressions = append(mkMetrics.Impressions, metrics.Visits) // Using visits as approximation
-			mkMetrics.Clicks = append(mkMetrics.Clicks, metrics.Users) // Using users as approximation
-			mkMetrics.CTR = append(mkMetrics.CTR, 0) // Metrica doesn't have CTR in this context
+			mkMetrics.Clicks = append(mkMetrics.Clicks, metrics.Users)            // Using users as approximation
+			mkMetrics.CTR = append(mkMetrics.CTR, 0)                              // Metrica doesn't have CTR in this context
 			if metrics.Conversions != nil {
 				mkMetrics.Conversions = append(mkMetrics.Conversions, *metrics.Conversions)
 			} else {
 				mkMetrics.Conversions = append(mkMetrics.Conversions, 0)
 			}
-			mkMetrics.CPA = append(mkMetrics.CPA, 0) // Metrica doesn't have CPA
+			mkMetrics.CPA = append(mkMetrics.CPA, 0)   // Metrica doesn't have CPA
 			mkMetrics.Cost = append(mkMetrics.Cost, 0) // Metrica doesn't track cost
 		} else {
 			// Add zeros if no data
@@ -513,11 +513,15 @@ func (s *ReportService) AnalyzeChannelMetrics(ctx context.Context, metricsData *
 		return nil, fmt.Errorf("Python script not found. Tried: %v", possiblePaths)
 	}
 
+	// Create context with timeout for script execution (120 seconds)
+	scriptCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
 	// Create command to run Python script
-	cmd := exec.CommandContext(ctx, "python3", scriptPath)
+	cmd := exec.CommandContext(scriptCtx, "python3", scriptPath)
 	// If python3 is not available, try python
 	if _, err := exec.LookPath("python3"); err != nil {
-		cmd = exec.CommandContext(ctx, "python", scriptPath)
+		cmd = exec.CommandContext(scriptCtx, "python", scriptPath)
 	}
 
 	// Set environment variables for Ollama API

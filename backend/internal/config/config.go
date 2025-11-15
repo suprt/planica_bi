@@ -32,18 +32,17 @@ type Config struct {
 	YandexDirectSandbox   bool // Use sandbox environment for Yandex Direct API
 	DefaultTimezone       string
 
-	JWTSecret string // Secret key for JWT tokens
-	JWTExpiry int    // JWT token expiry in hours (default 24)
-	OllamaAPIKey  string // Ollama API key for metrics analysis
-	OllamaAPIURL  string // Ollama API URL (default: https://api.ollama.com/v1)
-	OllamaModel   string // Ollama model name (default: llama3.2)
+	JWTSecret    string // Secret key for JWT tokens
+	JWTExpiry    int    // JWT token expiry in hours (default 24)
+	OllamaAPIKey string // Ollama API key for metrics analysis
+	OllamaAPIURL string // Ollama API URL (default: https://api.ollama.com/v1)
+	OllamaModel  string // Ollama model name (default: llama3.2)
 
 	// Redis configuration
 	RedisHost     string
 	RedisPort     string
 	RedisPassword string
 	RedisDB       int
-
 
 	LogLevel string
 }
@@ -80,14 +79,10 @@ func Load() *Config {
 		OllamaModel:           getEnv("OLLAMA_MODEL", "glm-4.6"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
 
-
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
-		RedisDB:      getEnvInt("REDIS_DB", 0),
-
-		LogLevel: getEnv("LOG_LEVEL", "info"),
-
+		RedisDB:       getEnvInt("REDIS_DB", 0),
 	}
 }
 

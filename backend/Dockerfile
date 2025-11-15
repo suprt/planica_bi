@@ -26,7 +26,7 @@ COPY --from=builder /app/main .
 
 # Copy Python scripts and install dependencies
 COPY scripts/ ./scripts/
-RUN if [ -f scripts/requirements.txt ]; then pip3 install --no-cache-dir -r scripts/requirements.txt; fi
+RUN if [ -f scripts/requirements.txt ]; then pip3 install --break-system-packages --no-cache-dir -r scripts/requirements.txt; fi
 
 # Expose port
 EXPOSE 8080
