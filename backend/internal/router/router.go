@@ -94,6 +94,8 @@ func SetupRoutes(
 	projectRoutes.GET("/projects/:id/direct-accounts", directHandler.GetDirectAccounts)
 	projectRoutes.GET("/projects/:id/goals", goalsHandler.GetGoals)
 	projectRoutes.GET("/report/:id", reportHandler.GetReport)
+	projectRoutes.GET("/channel-metrics/:id", reportHandler.GetChannelMetrics)
+	projectRoutes.GET("/channel-metrics/:id/analyze", reportHandler.AnalyzeChannelMetrics)
 
 	// Manager and admin routes (require manager or admin role)
 	managerRoutes := protected.Group("")
