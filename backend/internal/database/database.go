@@ -60,6 +60,8 @@ func AutoMigrate() error {
 
 	err := DB.AutoMigrate(
 		&models.Project{},
+		&models.User{},
+		&models.UserProjectRole{},
 		&models.YandexCounter{},
 		&models.DirectAccount{},
 		&models.DirectCampaign{},

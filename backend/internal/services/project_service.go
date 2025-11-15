@@ -39,9 +39,10 @@ func (s *ProjectService) GetProject(ctx context.Context, id uint) (*models.Proje
 	return s.projectRepo.GetByID(ctx, id)
 }
 
-// GetAllProjects retrieves all projects
-func (s *ProjectService) GetAllProjects(ctx context.Context) ([]*models.Project, error) {
-	return s.projectRepo.GetAll(ctx)
+// GetAllProjects retrieves all projects for a user
+// Admin gets all projects, others get only projects they have access to
+func (s *ProjectService) GetAllProjects(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error) {
+	return s.projectRepo.GetByUserID(ctx, userID, isAdmin)
 }
 
 // UpdateProject updates a project

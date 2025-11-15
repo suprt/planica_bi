@@ -1,0 +1,46 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.sql.backup
+*.sql.gz
+*.sql.zip
+mysql_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Go specific (if any Go files are added later)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Docker volumes
+docker/mysql_data/
+

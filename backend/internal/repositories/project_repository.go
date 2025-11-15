@@ -39,6 +39,26 @@ func (r *ProjectRepository) GetAll(ctx context.Context) ([]*models.Project, erro
 	return projects, err
 }
 
+// GetByUserID retrieves all projects for a specific user
+// Admin gets all projects, others get only projects they have access to
+func (r *ProjectRepository) GetByUserID(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error) {
+	var projects []*models.Project
+
+	if isAdmin {
+		// Admin sees all projects
+		return r.GetAll(ctx)
+	}
+
+	// Get projects through user_project_roles
+	err := r.db.WithContext(ctx).
+		Table("projects").
+		Joins("INNER JOIN user_project_roles ON projects.id = user_project_roles.project_id").
+		Where("user_project_roles.user_id = ?", userID).
+		Find(&projects).Error
+
+	return projects, err
+}
+
 // Update updates a project
 func (r *ProjectRepository) Update(ctx context.Context, project *models.Project) error {
 	return r.db.WithContext(ctx).Save(project).Error

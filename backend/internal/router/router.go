@@ -8,6 +8,7 @@ import (
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 )
 
 // SetupRoutes configures all API routes using Echo
@@ -20,6 +21,8 @@ func SetupRoutes(
 	goalService handlers.GoalServiceInterface,
 	directService handlers.DirectServiceInterface,
 	counterService handlers.CounterServiceInterface,
+	authService handlers.AuthServiceInterface,
+	userRepo repositories.UserRepositoryInterface,
 ) *echo.Echo {
 	e := echo.New()
 
@@ -37,45 +40,58 @@ func SetupRoutes(
 	e.HTTPErrorHandler = customErrorHandler
 
 	// Initialize handlers with services
-	projectHandler := handlers.NewProjectHandler(projectService)
+	projectHandler := handlers.NewProjectHandler(projectService, userRepo)
 	countersHandler := handlers.NewCountersHandler(counterService)
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
 	reportHandler := handlers.NewReportHandler(reportService)
 	syncHandler := handlers.NewSyncHandler(syncService)
 	oauthHandler := handlers.NewOAuthHandler(cfg)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	// API group
 	api := e.Group("/api")
 
-	// OAuth routes
+	// Public routes (no authentication required)
+	// Auth routes
+	api.POST("/auth/register", authHandler.Register)
+	api.POST("/auth/login", authHandler.Login)
+
+	// OAuth routes (public, but may require auth later)
 	api.GET("/oauth/yandex", oauthHandler.InitiateAuth)
 	api.GET("/oauth/yandex/callback", oauthHandler.HandleCallback)
 
+	// Protected routes (require authentication)
+	protected := api.Group("")
+	protected.Use(AuthMiddleware(authService))
+
 	// Project routes
-	api.POST("/projects", projectHandler.CreateProject)
-	api.GET("/projects", projectHandler.GetAllProjects)
-	api.GET("/projects/:id", projectHandler.GetProject)
-	api.PUT("/projects/:id", projectHandler.UpdateProject)
-	api.DELETE("/projects/:id", projectHandler.DeleteProject)
+	// Create project (admin only)
+	adminOnly := protected.Group("")
+	adminOnly.Use(RequireProjectRole(userRepo, "admin"))
+	adminOnly.POST("/projects", projectHandler.CreateProject)
+	adminOnly.DELETE("/projects/:id", projectHandler.DeleteProject)
+	adminOnly.POST("/sync/:id", syncHandler.SyncProject)
 
-	// Counters routes
-	api.POST("/projects/:id/counters", countersHandler.AddCounter)
-	api.GET("/projects/:id/counters", countersHandler.GetCounters)
+	// Get all projects (users see only their projects - handled in service)
+	protected.GET("/projects", projectHandler.GetAllProjects)
 
-	// Direct routes
-	api.POST("/projects/:id/direct-accounts", directHandler.AddDirectAccount)
-	api.GET("/projects/:id/direct-accounts", directHandler.GetDirectAccounts)
+	// Project-specific routes (require project access)
+	projectRoutes := protected.Group("")
+	projectRoutes.Use(RequireProjectRole(userRepo, "admin", "manager", "client"))
+	projectRoutes.GET("/projects/:id", projectHandler.GetProject)
+	projectRoutes.GET("/projects/:id/counters", countersHandler.GetCounters)
+	projectRoutes.GET("/projects/:id/direct-accounts", directHandler.GetDirectAccounts)
+	projectRoutes.GET("/projects/:id/goals", goalsHandler.GetGoals)
+	projectRoutes.GET("/report/:id", reportHandler.GetReport)
 
-	// Goals routes
-	api.POST("/projects/:id/goals", goalsHandler.AddGoal)
-	api.GET("/projects/:id/goals", goalsHandler.GetGoals)
-
-	// Report routes
-	api.GET("/report/:id", reportHandler.GetReport)
-
-	// Sync routes
-	api.POST("/sync/:id", syncHandler.SyncProject)
+	// Manager and admin routes (require manager or admin role)
+	managerRoutes := protected.Group("")
+	managerRoutes.Use(RequireProjectRole(userRepo, "admin", "manager"))
+	managerRoutes.PUT("/projects/:id", projectHandler.UpdateProject)
+	managerRoutes.POST("/projects/:id/counters", countersHandler.AddCounter)
+	managerRoutes.POST("/projects/:id/direct-accounts", directHandler.AddDirectAccount)
+	managerRoutes.POST("/projects/:id/goals", goalsHandler.AddGoal)
 
 	return e
 }

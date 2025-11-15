@@ -53,8 +53,14 @@ func main() {
 	// directService := services.NewDirectService(...)
 	// counterService := services.NewCounterService(...)
 
-	_ = db                                                     // Will be used when initializing repositories
-	e := router.SetupRoutes(cfg, nil, nil, nil, nil, nil, nil) // TODO: pass actual services
+	_ = db // Will be used when initializing repositories
+
+	// TODO: Initialize repositories and services when database is enabled
+	// userRepo := repositories.NewUserRepository(db)
+	// authService := services.NewAuthService(userRepo, cfg.JWTSecret, time.Duration(cfg.JWTExpiry)*time.Hour)
+
+	// For now, passing nil - will be implemented when database is enabled
+	e := router.SetupRoutes(cfg, nil, nil, nil, nil, nil, nil, nil, nil) // TODO: pass actual services including authService and userRepo
 
 	// Start server
 	addr := ":8080"

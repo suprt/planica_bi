@@ -6,13 +6,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
 )
 
 // ProjectServiceInterface defines methods for project operations
 type ProjectServiceInterface interface {
 	CreateProject(ctx context.Context, project *models.Project) error
 	GetProject(ctx context.Context, id uint) (*models.Project, error)
-	GetAllProjects(ctx context.Context) ([]*models.Project, error)
+	GetAllProjects(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error)
 	UpdateProject(ctx context.Context, project *models.Project) error
 	DeleteProject(ctx context.Context, id uint) error
 }
@@ -20,12 +21,14 @@ type ProjectServiceInterface interface {
 // ProjectHandler handles HTTP requests for projects
 type ProjectHandler struct {
 	projectService ProjectServiceInterface
+	userRepo       repositories.UserRepositoryInterface
 }
 
 // NewProjectHandler creates a new project handler
-func NewProjectHandler(projectService ProjectServiceInterface) *ProjectHandler {
+func NewProjectHandler(projectService ProjectServiceInterface, userRepo repositories.UserRepositoryInterface) *ProjectHandler {
 	return &ProjectHandler{
 		projectService: projectService,
+		userRepo:       userRepo,
 	}
 }
 
@@ -70,7 +73,20 @@ func (h *ProjectHandler) GetProject(c echo.Context) error {
 func (h *ProjectHandler) GetAllProjects(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	projects, err := h.projectService.GetAllProjects(ctx)
+	// Get user ID from context (set by AuthMiddleware)
+	userID, ok := c.Get("user_id").(uint)
+	if !ok {
+		return echo.NewHTTPError(401, "User not authenticated")
+	}
+
+	// Check if user is admin
+	isAdmin, err := h.userRepo.IsAdmin(ctx, userID)
+	if err != nil {
+		// If error checking admin status, assume not admin
+		isAdmin = false
+	}
+
+	projects, err := h.projectService.GetAllProjects(ctx, userID, isAdmin)
 	if err != nil {
 		return err
 	}

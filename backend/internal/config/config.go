@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -30,6 +31,9 @@ type Config struct {
 	YandexDefaultCurrency string
 	YandexDirectSandbox   bool // Use sandbox environment for Yandex Direct API
 	DefaultTimezone       string
+
+	JWTSecret string // Secret key for JWT tokens
+	JWTExpiry int    // JWT token expiry in hours (default 24)
 
 	LogLevel string
 }
@@ -59,6 +63,8 @@ func Load() *Config {
 		YandexDefaultCurrency: getEnv("YANDEX_DEFAULT_CURRENCY", "RUB"),
 		YandexDirectSandbox:   getEnv("YANDEX_DIRECT_SANDBOX", "false") == "true", // Use sandbox for testing
 		DefaultTimezone:       getEnv("DEFAULT_TIMEZONE", "Europe/Moscow"),
+		JWTSecret:             getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+		JWTExpiry:             getEnvInt("JWT_EXPIRY", 24), // Default 24 hours
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
 	}
 }
@@ -66,6 +72,15 @@ func Load() *Config {
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
 	}
 	return defaultValue
 }
