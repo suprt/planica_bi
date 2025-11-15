@@ -35,6 +35,10 @@ type Config struct {
 	JWTSecret string // Secret key for JWT tokens
 	JWTExpiry int    // JWT token expiry in hours (default 24)
 
+	OllamaAPIKey  string // Ollama API key for metrics analysis
+	OllamaAPIURL  string // Ollama API URL (default: https://api.ollama.com/v1)
+	OllamaModel   string // Ollama model name (default: llama3.2)
+
 	LogLevel string
 }
 
@@ -65,6 +69,9 @@ func Load() *Config {
 		DefaultTimezone:       getEnv("DEFAULT_TIMEZONE", "Europe/Moscow"),
 		JWTSecret:             getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		JWTExpiry:             getEnvInt("JWT_EXPIRY", 24), // Default 24 hours
+		OllamaAPIKey:          getEnv("OLLAMA_API_KEY", ""),
+		OllamaAPIURL:          getEnv("OLLAMA_API_URL", "https://ollama.com/api"),
+		OllamaModel:           getEnv("OLLAMA_MODEL", "glm-4.6"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
 	}
 }

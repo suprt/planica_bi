@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
@@ -65,7 +69,7 @@ func main() {
 
 	// Initialize services
 	projectService := services.NewProjectService(projectRepo)
-	reportService := services.NewReportService(metricsRepo, directRepo, seoRepo)
+	reportService := services.NewReportService(metricsRepo, directRepo, seoRepo, projectRepo, cfg)
 	syncService := services.NewSyncService(
 		projectRepo,
 		metricsRepo,
@@ -97,10 +101,29 @@ func main() {
 		userRepo,
 	)
 
-	// Start server
+	// Start server in a goroutine
 	addr := ":8080"
-	log.Info("Server starting", zap.String("address", addr))
-	if err := e.Start(addr); err != nil {
-		log.Fatal("Server failed to start", zap.Error(err))
+	go func() {
+		log.Info("Server starting", zap.String("address", addr))
+		if err := e.Start(addr); err != nil {
+			log.Error("Server failed to start", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Info("Shutting down server...")
+
+	// Gracefully shutdown server with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		log.Error("Server forced to shutdown", zap.Error(err))
 	}
+
+	log.Info("Server exited")
 }
