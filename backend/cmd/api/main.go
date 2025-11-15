@@ -80,7 +80,7 @@ func main() {
 
 	// Initialize services
 	projectService := services.NewProjectService(projectRepo)
-	reportService := services.NewReportService(metricsRepo, directRepo, seoRepo)
+	reportService := services.NewReportService(metricsRepo, directRepo, seoRepo, projectRepo, cfg)
 	syncService := services.NewSyncService(
 		projectRepo,
 		metricsRepo,
