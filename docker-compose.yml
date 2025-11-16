@@ -42,6 +42,8 @@ services:
       # Mount logs directory to persist logs on host
       # In container, working directory is /root/, so logs path is /root/storage/logs
       - ./backend/storage/logs:/root/storage/logs
+      # Mount .env file to persist OAuth token and other config changes
+      - ./backend/.env:/root/.env
     depends_on:
       mysql:
         condition: service_healthy
@@ -71,6 +73,19 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: planica_bi_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - planica_network
+    restart: unless-stopped
 
   adminer:
     image: adminer:4.8.1

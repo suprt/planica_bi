@@ -247,6 +247,75 @@ func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) err
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
 
+	// Generate AI analysis for the report
+	// Get channel metrics data for AI analysis
+	if logger.Log != nil {
+		logger.Log.Info("Starting AI analysis for report",
+			zap.Uint("project_id", payload.ProjectID),
+			zap.Strings("periods", report.Periods),
+		)
+	}
+	
+	metricsData, err := w.reportService.GetChannelMetrics(ctx, payload.ProjectID, report.Periods)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Warn("Failed to get channel metrics for AI analysis",
+				zap.Uint("project_id", payload.ProjectID),
+				zap.Error(err),
+			)
+		}
+	} else {
+		if logger.Log != nil {
+			logger.Log.Info("Channel metrics retrieved, starting AI analysis",
+				zap.Uint("project_id", payload.ProjectID),
+				zap.Int("channels_count", len(metricsData.Metrics)),
+			)
+		}
+		
+		// Analyze metrics using AI
+		aiResult, err := w.reportService.AnalyzeChannelMetrics(ctx, metricsData)
+		if err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to analyze metrics for report",
+					zap.Uint("project_id", payload.ProjectID),
+					zap.Error(err),
+				)
+			}
+		} else if aiResult != nil {
+			// Convert MetricsAnalysisResult to AiInsights format
+			aiInsights := &services.AiInsights{
+				Summary: aiResult.AnalyticalFacts,
+			}
+			
+			// If AI report is available, use it; otherwise use analytical facts
+			if aiResult.AIReport != "" {
+				aiInsights.Summary = aiResult.AIReport
+			}
+			
+			// Split recommendations if available (for now, just use summary as recommendations)
+			// TODO: Parse AI report to extract recommendations if format allows
+			report.AiInsights = aiInsights
+			
+			if logger.Log != nil {
+				summaryPreview := aiInsights.Summary
+				if len(summaryPreview) > 100 {
+					summaryPreview = summaryPreview[:100] + "..."
+				}
+				logger.Log.Info("AI analysis added to report",
+					zap.Uint("project_id", payload.ProjectID),
+					zap.Bool("has_insights", aiInsights != nil),
+					zap.String("summary_preview", summaryPreview),
+				)
+			}
+		} else {
+			if logger.Log != nil {
+				logger.Log.Warn("AI analysis returned nil result",
+					zap.Uint("project_id", payload.ProjectID),
+				)
+			}
+		}
+	}
+
 	// Store report in cache for retrieval (using project_id as key)
 	// TTL: 1 hour - reports are regenerated periodically
 	if w.cache != nil {
@@ -264,6 +333,7 @@ func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) err
 	if logger.Log != nil {
 		logger.Log.Info("Report generation task completed",
 			zap.Uint("project_id", payload.ProjectID),
+			zap.Bool("has_ai_insights", report.AiInsights != nil),
 		)
 	}
 

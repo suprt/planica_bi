@@ -1,7 +1,10 @@
 import { NavItem } from '../types';
 
 export const navigationItems: NavItem[] = [
+    { id: 'projects', label: 'Проекты', icon: '📁' },
     { id: 'statistics', label: 'Статистика', icon: '📊' },
+    { id: 'metrics', label: 'Метрики', icon: '📈' },
+    { id: 'reports', label: 'Отчеты', icon: '📄' },
     { id: 'sources', label: 'Источники', icon: '🔄' },
     { id: 'purchases', label: 'Закупки', icon: '🛒' },
     { id: 'tasks', label: 'Задачи и проекты', icon: '📋' },

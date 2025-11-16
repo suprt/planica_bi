@@ -6,12 +6,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
 )
 
 // DirectServiceInterface defines methods for Direct operations
 type DirectServiceInterface interface {
 	CreateAccount(ctx context.Context, account *models.DirectAccount) error
 	GetAccountsByProject(ctx context.Context, projectID uint) ([]*models.DirectAccount, error)
+	GetCampaignsWithMetrics(ctx context.Context, projectID uint) ([]services.CampaignWithMetrics, error)
 }
 
 // DirectHandler handles HTTP requests for Direct accounts
@@ -74,4 +76,22 @@ func (h *DirectHandler) GetDirectAccounts(c echo.Context) error {
 	}
 
 	return c.JSON(200, accounts)
+}
+
+// GetCampaigns handles GET /api/projects/:id/campaigns
+func (h *DirectHandler) GetCampaigns(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	projectIDStr := c.Param("id")
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
+	if err != nil {
+		return echo.NewHTTPError(400, "Invalid project ID")
+	}
+
+	campaigns, err := h.directService.GetCampaignsWithMetrics(ctx, uint(projectID))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, campaigns)
 }

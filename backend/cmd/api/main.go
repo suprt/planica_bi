@@ -93,6 +93,8 @@ func main() {
 	goalService := services.NewGoalService(goalRepo, counterRepo)
 	directService := services.NewDirectService(directRepo)
 	counterService := services.NewCounterService(counterRepo)
+	metricsService := services.NewMetricsService(metricsRepo)
+	marketingService := services.NewMarketingService(directRepo)
 	authService := services.NewAuthService(
 		userRepo,
 		cfg.JWTSecret,
@@ -139,6 +141,8 @@ func main() {
 		goalService,
 		directService,
 		counterService,
+		metricsService,
+		marketingService,
 		authService,
 		userService,
 		userRepo,

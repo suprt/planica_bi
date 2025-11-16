@@ -46,14 +46,24 @@ func NewReportService(
 	}
 }
 
+// Dynamics represents percentage change compared to previous period
+type Dynamics struct {
+	Visits float64 `json:"visits"`
+	Users  float64 `json:"users"`
+	Bounce float64 `json:"bounce"`
+	AvgSec float64 `json:"avgSec"`
+	Conv   float64 `json:"conv,omitempty"`
+}
+
 // MetricaSummaryRow represents a single row in metrica summary
 type MetricaSummaryRow struct {
-	Month  string  `json:"month"`
-	Visits int     `json:"visits"`
-	Users  int     `json:"users"`
-	Bounce float64 `json:"bounce"`
-	AvgSec int     `json:"avgSec"`
-	Conv   *int    `json:"conv,omitempty"`
+	Month    string    `json:"month"`
+	Visits   int       `json:"visits"`
+	Users    int       `json:"users"`
+	Bounce   float64   `json:"bounce"`
+	AvgSec   int       `json:"avgSec"`
+	Conv     *int      `json:"conv,omitempty"`
+	Dynamics *Dynamics `json:"dynamics,omitempty"`
 }
 
 // MetricaAgeRow represents a single row in metrica age breakdown
@@ -130,13 +140,20 @@ type SEOData struct {
 	Queries []SEOQueryRow   `json:"queries"`
 }
 
+// AiInsights represents AI analysis insights
+type AiInsights struct {
+	Summary         string   `json:"summary"`
+	Recommendations []string `json:"recommendations,omitempty"`
+}
+
 // Report represents a full report according to TZ format
 type Report struct {
-	ProjectID uint        `json:"projectId"`
-	Periods   []string    `json:"periods"`
-	Metrica   MetricaData `json:"metrica"`
-	Direct    DirectData  `json:"direct"`
-	SEO       SEOData     `json:"seo"`
+	ProjectID  uint        `json:"projectId"`
+	Periods    []string    `json:"periods"`
+	Metrica    MetricaData `json:"metrica"`
+	Direct     DirectData  `json:"direct"`
+	SEO        SEOData     `json:"seo"`
+	AiInsights *AiInsights `json:"ai_insights,omitempty"`
 }
 
 // GetReport generates a report for a project for the last 3 months
@@ -288,6 +305,31 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 	// Convert campaign map to slice
 	for _, campaignData := range campaignMap {
 		report.Direct.Campaigns = append(report.Direct.Campaigns, *campaignData)
+	}
+
+	// Calculate dynamics for Metrica summary (compare current month with previous)
+	if len(report.Metrica.Summary) >= 2 {
+		m0 := &report.Metrica.Summary[0] // Current month
+		m1 := &report.Metrica.Summary[1] // Previous month
+
+		m0.Dynamics = &Dynamics{
+			Visits: utils.CalculateDynamics(float64(m0.Visits), float64(m1.Visits)),
+			Users:  utils.CalculateDynamics(float64(m0.Users), float64(m1.Users)),
+			Bounce: utils.CalculateDynamics(m0.Bounce, m1.Bounce),
+			AvgSec: utils.CalculateDynamics(float64(m0.AvgSec), float64(m1.AvgSec)),
+		}
+
+		// Calculate dynamics for conversions if both have values
+		var conv0, conv1 float64
+		if m0.Conv != nil {
+			conv0 = float64(*m0.Conv)
+		}
+		if m1.Conv != nil {
+			conv1 = float64(*m1.Conv)
+		}
+		if conv1 > 0 {
+			m0.Dynamics.Conv = utils.CalculateDynamics(conv0, conv1)
+		}
 	}
 
 	// TODO: SEO summary - need to get organic visitors and conversions from Metrica

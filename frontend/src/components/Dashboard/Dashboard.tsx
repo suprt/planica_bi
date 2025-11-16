@@ -1,8 +1,11 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrentTime, useClickOutside } from '../../hooks';
 import { navigationItems } from '../../utils/navigation';
+import { projectStorage } from '../../utils/projectStorage';
+import { oauthService } from '../../services/api/oauthService';
 import { NavItem as NavItemType } from '../../types';
 import '../../App.css';
 
@@ -39,24 +42,39 @@ const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
+    const { user, logout } = useAuth();
     const currentTime = useCurrentTime();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
     const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false);
     const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+    const [yandexAuthorized, setYandexAuthorized] = useState<boolean>(false);
+    const [yandexAuthLoading, setYandexAuthLoading] = useState<boolean>(true);
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeNavItem, setActiveNavItem] = useState<string>(() => {
         // Определяем активный элемент на основе текущего пути
-        if (location.pathname.includes('/statistics')) return 'statistics';
+        const path = location.pathname;
+        if (path.includes('/statistics')) return 'statistics';
+        if (path.includes('/reports')) return 'reports';
+        if (path.includes('/metrics')) return 'metrics';
+        if (path.includes('/projects')) return 'projects';
+        if (path.includes('/marketing')) return 'marketing';
+        if (path === '/dashboard' || path === '/dashboard/') return 'projects';
+        // Для всех остальных разделов определяем активный элемент по пути
+        const section = path.replace('/dashboard/', '').split('?')[0];
+        if (section && navigationItems.some(item => item.id === section)) {
+            return section;
+        }
         return '';
     });
     const notificationsRef = useRef<HTMLDivElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
 
-    // Пример данных пользователя
+    // Данные текущего пользователя из AuthContext
     const currentUser = useMemo(() => ({
-        name: 'Иван Иванов',
-        position: 'Менеджер по продажам',
-        avatar: 'ИИ'
-    }), []);
+        name: user?.name || 'Пользователь',
+        position: 'Менеджер по продажам', // TODO: Добавить role в User model
+        avatar: user?.name ? user.name.substring(0, 2).toUpperCase() : 'ПО'
+    }), [user]);
 
     // Пример данных уведомлений
     const notifications = useMemo(() => [
@@ -68,12 +86,73 @@ const Dashboard: React.FC = () => {
 
     // Обновление активного элемента при изменении пути
     useEffect(() => {
-        if (location.pathname.includes('/statistics')) {
+        const path = location.pathname;
+        if (path.includes('/statistics')) {
             setActiveNavItem('statistics');
+        } else if (path.includes('/reports')) {
+            setActiveNavItem('reports');
+        } else if (path.includes('/metrics')) {
+            setActiveNavItem('metrics');
+        } else if (path.includes('/projects')) {
+            setActiveNavItem('projects');
+        } else if (path.includes('/marketing')) {
+            setActiveNavItem('marketing');
+        } else if (path === '/dashboard' || path === '/dashboard/') {
+            setActiveNavItem('projects');
         } else {
-            setActiveNavItem('');
+            // Для всех остальных разделов определяем активный элемент по пути
+            const section = path.replace('/dashboard/', '').split('?')[0];
+            if (section && navigationItems.some(item => item.id === section)) {
+                setActiveNavItem(section);
+            } else {
+                setActiveNavItem('');
+            }
         }
     }, [location.pathname]);
+
+    // Проверка статуса OAuth авторизации в Яндекс
+    useEffect(() => {
+        const checkOAuthStatus = async () => {
+            try {
+                setYandexAuthLoading(true);
+                const status = await oauthService.getStatus();
+                console.log('[Dashboard] OAuth status:', status);
+                // Only use status.authorized, not status.has_token
+                // has_token just indicates token exists, but authorized means it's valid
+                setYandexAuthorized(status.authorized === true);
+            } catch (err) {
+                console.error('[Dashboard] Failed to check OAuth status:', err);
+                setYandexAuthorized(false);
+            } finally {
+                setYandexAuthLoading(false);
+            }
+        };
+
+        checkOAuthStatus();
+    }, []);
+
+    // Обработка параметров OAuth callback
+    useEffect(() => {
+        const oauthParam = searchParams.get('oauth');
+        if (oauthParam === 'success') {
+            // Успешная авторизация
+            setYandexAuthorized(true);
+            // Убираем параметр из URL
+            searchParams.delete('oauth');
+            setSearchParams(searchParams, { replace: true });
+            // Можно показать уведомление
+            console.log('[Dashboard] Yandex OAuth authorization successful');
+        } else if (oauthParam === 'error') {
+            // Ошибка авторизации
+            setYandexAuthorized(false);
+            const errorParam = searchParams.get('error');
+            console.error('[Dashboard] Yandex OAuth authorization failed:', errorParam);
+            // Убираем параметры из URL
+            searchParams.delete('oauth');
+            searchParams.delete('error');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     // Закрытие выпадающих списков при клике вне их области
     useClickOutside(notificationsRef, () => setNotificationsOpen(false));
@@ -101,12 +180,20 @@ const Dashboard: React.FC = () => {
         });
     }, []);
 
+    /**
+     * Обработка выхода из системы
+     * Удаляет токен и редиректит на страницу логина
+     */
     const handleLogout = useCallback(() => {
-        console.log('Выход из системы');
+        console.log('[Dashboard] User logout initiated');
         setUserMenuOpen(false);
-        // TODO: Реализовать очистку токенов/сессии
+        
+        // Вызываем logout из AuthContext (удаляет токен из localStorage)
+        logout();
+        
+        // Редиректим на страницу логина
         navigate('/login');
-    }, [navigate]);
+    }, [logout, navigate]);
 
     const handleProfile = useCallback(() => {
         console.log('Переход в профиль');
@@ -117,13 +204,47 @@ const Dashboard: React.FC = () => {
         toggleTheme();
     }, [toggleTheme]);
 
+    const handleYandexAuth = useCallback(() => {
+        oauthService.initiateYandexAuth();
+    }, []);
+
     const handleNavItemClick = useCallback((itemId: string) => {
         setActiveNavItem(itemId);
         // Навигация по разделам
         if (itemId === 'statistics') {
-            navigate('/dashboard/statistics');
+            // Используем последний выбранный проект, если он есть
+            const lastProjectId = projectStorage.getLastProject();
+            if (lastProjectId) {
+                navigate(`/dashboard/statistics?project=${lastProjectId}`);
+            } else {
+                // Если нет последнего проекта, переходим на страницу выбора проекта
+                navigate('/dashboard/projects');
+            }
+        } else if (itemId === 'reports') {
+            // Используем последний выбранный проект, если он есть
+            const lastProjectId = projectStorage.getLastProject();
+            if (lastProjectId) {
+                navigate(`/dashboard/reports?project=${lastProjectId}`);
+            } else {
+                // Если нет последнего проекта, переходим на страницу выбора проекта
+                navigate('/dashboard/projects');
+            }
+        } else if (itemId === 'metrics') {
+            // Используем последний выбранный проект, если он есть
+            const lastProjectId = projectStorage.getLastProject();
+            if (lastProjectId) {
+                navigate(`/dashboard/metrics?project=${lastProjectId}`);
+            } else {
+                // Если нет последнего проекта, переходим на страницу выбора проекта
+                navigate('/dashboard/projects');
+            }
+        } else if (itemId === 'projects') {
+            navigate('/dashboard/projects');
+        } else if (itemId === 'marketing') {
+            navigate('/dashboard/marketing');
         } else {
-            navigate('/dashboard');
+            // Для всех остальных разделов (sources, purchases, tasks, etc.) ведем на placeholder
+            navigate(`/dashboard/${itemId}`);
         }
     }, [navigate]);
 
@@ -208,6 +329,18 @@ const Dashboard: React.FC = () => {
                     >
                         {theme === 'dark' ? '☀️' : '🌙'}
                     </button>
+
+                    <div className="yandex-auth-status">
+                        <button 
+                            className={`yandex-auth-button ${yandexAuthorized ? 'authorized' : 'not-authorized'}`}
+                            onClick={handleYandexAuth}
+                            disabled={yandexAuthLoading}
+                            aria-label={yandexAuthorized ? 'Авторизован в Яндекс' : 'Авторизоваться в Яндекс'}
+                            title={yandexAuthorized ? 'Авторизован в Яндекс' : 'Авторизоваться в Яндекс'}
+                        >
+                            {yandexAuthLoading ? '⏳' : yandexAuthorized ? '✅ Яндекс' : '🔐 Яндекс'}
+                        </button>
+                    </div>
 
                     <div className="user-menu" ref={userMenuRef}>
                         <button 

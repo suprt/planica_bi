@@ -115,7 +115,12 @@ func (h *OAuthHandler) HandleCallback(c echo.Context) error {
 				zap.String("description", errorDescription),
 			)
 		}
-		return echo.NewHTTPError(400, fmt.Sprintf("OAuth error: %s - %s", errorParam, errorDescription))
+		// Redirect to frontend with error parameter
+		frontendURL := h.cfg.FrontendURL
+		if frontendURL == "" {
+			frontendURL = h.cfg.AppURL
+		}
+		return c.Redirect(http.StatusFound, fmt.Sprintf("%s/dashboard?oauth=error&error=%s", frontendURL, url.QueryEscape(errorParam)))
 	}
 
 	if logger.Log != nil {
@@ -130,7 +135,12 @@ func (h *OAuthHandler) HandleCallback(c echo.Context) error {
 				zap.Error(err),
 			)
 		}
-		return fmt.Errorf("failed to exchange code for token: %w", err)
+		// Redirect to frontend with error parameter
+		frontendURL := h.cfg.FrontendURL
+		if frontendURL == "" {
+			frontendURL = h.cfg.AppURL
+		}
+		return c.Redirect(http.StatusFound, fmt.Sprintf("%s/dashboard?oauth=error", frontendURL))
 	}
 
 	// Save token to .env file (for MVP)
@@ -163,9 +173,7 @@ func (h *OAuthHandler) HandleCallback(c echo.Context) error {
 		)
 	}
 
-	// Redirect to frontend
-	// TODO: Determine where to redirect (main page, dashboard, etc.)
-	// Could also pass token in query param or session, but better to save in DB and use session
+	// Redirect to frontend with success parameter
 	frontendURL := h.cfg.FrontendURL
 	if frontendURL == "" {
 		// Fallback to AppURL if FrontendURL is not configured
@@ -176,7 +184,109 @@ func (h *OAuthHandler) HandleCallback(c echo.Context) error {
 			zap.String("frontend_url", frontendURL),
 		)
 	}
-	return c.Redirect(http.StatusFound, frontendURL)
+	return c.Redirect(http.StatusFound, fmt.Sprintf("%s/dashboard?oauth=success", frontendURL))
+}
+
+// GetOAuthStatus handles GET /api/oauth/status
+// Returns OAuth authorization status by validating the token with Yandex API
+func (h *OAuthHandler) GetOAuthStatus(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	// If no token in config, definitely not authorized
+	if h.cfg.YandexOAuthToken == "" {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"authorized": false,
+			"has_token":  false,
+		})
+	}
+
+	// Validate token by making a request to Yandex API
+	// Using a simple info endpoint to check if token is valid
+	isValid, err := h.validateToken(ctx, h.cfg.YandexOAuthToken)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Warn("Failed to validate OAuth token",
+				zap.Error(err),
+			)
+		}
+		// If validation fails, assume token is invalid
+		isValid = false
+	}
+
+	if logger.Log != nil {
+		tokenPreview := ""
+		if len(h.cfg.YandexOAuthToken) > 20 {
+			tokenPreview = h.cfg.YandexOAuthToken[:20] + "..."
+		} else {
+			tokenPreview = h.cfg.YandexOAuthToken
+		}
+		logger.Log.Info("OAuth status check",
+			zap.String("token_preview", tokenPreview),
+			zap.Bool("is_valid", isValid),
+			zap.Bool("has_token", h.cfg.YandexOAuthToken != ""),
+		)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"authorized": isValid,
+		"has_token":  h.cfg.YandexOAuthToken != "",
+	})
+}
+
+// validateToken validates OAuth token by making a request to Yandex ID API
+// Returns true if token is valid, false otherwise
+func (h *OAuthHandler) validateToken(ctx context.Context, token string) (bool, error) {
+	// Use Yandex ID API info endpoint to validate token
+	// Documentation: https://yandex.ru/dev/id/doc/ru/user-information
+	infoURL := "https://login.yandex.ru/info"
+
+	req, err := http.NewRequestWithContext(ctx, "GET", infoURL, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "OAuth "+token)
+
+	client := &http.Client{
+		Timeout: 5 * time.Second, // Short timeout for status check
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Debug("Token validation request failed",
+				zap.Error(err),
+			)
+		}
+		return false, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read body to check for error details
+	body, _ := io.ReadAll(resp.Body)
+
+	if logger.Log != nil {
+		logger.Log.Debug("Token validation response",
+			zap.Int("status_code", resp.StatusCode),
+			zap.String("response_preview", string(body)[:min(len(string(body)), 100)]),
+		)
+	}
+
+	// If status is 200, token is valid
+	// If status is 401, token is invalid or expired
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// min helper function
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // exchangeCodeForToken exchanges authorization code for access token

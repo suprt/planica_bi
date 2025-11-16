@@ -1,19 +1,51 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import './Login.css';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { login: authLogin, isLoading } = useAuth();
+    
+    // Form state
     const [login, setLogin] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [rememberMe, setRememberMe] = useState<boolean>(false);
+    
+    // Error state
+    const [error, setError] = useState<string>('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    /**
+     * Обработка отправки формы
+     * Вызывает API login через AuthContext
+     */
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Вход:', { login, password, rememberMe });
-        // TODO: Реализовать логику входа с проверкой credentials
-        // Пока просто редиректим на dashboard
-        navigate('/dashboard');
+        
+        // Сбрасываем предыдущую ошибку
+        setError('');
+        
+        // Базовая валидация
+        if (!login.trim() || !password.trim()) {
+            setError('Заполните все поля');
+            return;
+        }
+
+        try {
+            // Вызываем login из AuthContext
+            // email = login (в форме может быть и логин, и email)
+            await authLogin(login.trim(), password);
+            
+            // Успешный вход - редиректим на dashboard
+            console.log('[Login] Success, redirecting to dashboard');
+            navigate('/dashboard');
+        } catch (err: any) {
+            // Обрабатываем ошибку
+            console.error('[Login] Error:', err);
+            
+            const errorMessage = err.message || 'Ошибка входа в систему. Проверьте данные и попробуйте снова.';
+            setError(errorMessage);
+        }
     };
 
     return (
@@ -25,6 +57,21 @@ const Login: React.FC = () => {
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>
+                    {/* Сообщение об ошибке */}
+                    {error && (
+                        <div className="error-message" style={{
+                            padding: '12px',
+                            marginBottom: '16px',
+                            backgroundColor: '#fee',
+                            border: '1px solid #fcc',
+                            borderRadius: '4px',
+                            color: '#c33',
+                            fontSize: '14px'
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                    
                     <div className="form-group">
                         <label htmlFor="login" className="form-label">
                             Логин или e-mail
@@ -37,6 +84,7 @@ const Login: React.FC = () => {
                             onChange={(e) => setLogin(e.target.value)}
                             placeholder=""
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -52,6 +100,7 @@ const Login: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder=""
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -67,8 +116,16 @@ const Login: React.FC = () => {
                         </label>
                     </div>
 
-                    <button type="submit" className="login-button">
-                        Войти
+                    <button 
+                        type="submit" 
+                        className="login-button"
+                        disabled={isLoading}
+                        style={{
+                            opacity: isLoading ? 0.6 : 1,
+                            cursor: isLoading ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {isLoading ? 'Вход...' : 'Войти'}
                     </button>
 
                     <div className="login-links">

@@ -62,7 +62,7 @@ type AssignRoleRequest struct {
 	Role      string `json:"role"`
 }
 
-// GetAllUsers retrieves all users
+// GetAllUsers retrieves all users with their project roles
 func (s *UserService) GetAllUsers(ctx context.Context) ([]UserResponse, error) {
 	users, err := s.userRepo.GetAll(ctx)
 	if err != nil {
@@ -71,11 +71,28 @@ func (s *UserService) GetAllUsers(ctx context.Context) ([]UserResponse, error) {
 
 	response := make([]UserResponse, len(users))
 	for i, user := range users {
+		// Get user projects
+		projectRoles, err := s.userRepo.GetUserProjects(ctx, user.ID)
+		if err != nil {
+			// If error getting projects, continue without them
+			projectRoles = []models.UserProjectRole{}
+		}
+
+		projects := make([]UserProjectResponse, len(projectRoles))
+		for j, pr := range projectRoles {
+			projects[j] = UserProjectResponse{
+				ProjectID:   pr.ProjectID,
+				ProjectName: pr.Project.Name,
+				Role:        pr.Role,
+			}
+		}
+
 		response[i] = UserResponse{
 			ID:       user.ID,
 			Name:     user.Name,
 			Email:    user.Email,
 			IsActive: user.IsActive,
+			Projects: projects,
 		}
 	}
 

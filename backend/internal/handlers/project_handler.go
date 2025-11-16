@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -60,7 +61,10 @@ func (h *ProjectHandler) CreateProject(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, project)
+	// React-admin expects { data: {...} }
+	return c.JSON(201, map[string]interface{}{
+		"data": project,
+	})
 }
 
 // GetProject handles GET /api/projects/:id
@@ -77,7 +81,50 @@ func (h *ProjectHandler) GetProject(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, project)
+	// React-admin expects { data: {...} }
+	return c.JSON(200, map[string]interface{}{
+		"data": project,
+	})
+}
+
+// GetPublicLink handles GET /api/projects/:id/public-link
+// Returns public URL for accessing report without authentication
+func (h *ProjectHandler) GetPublicLink(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		return echo.NewHTTPError(400, "Invalid project ID")
+	}
+
+	project, err := h.projectService.GetProject(ctx, uint(id))
+	if err != nil {
+		return err
+	}
+
+	if project.PublicToken == "" {
+		return echo.NewHTTPError(404, "Public token not found for this project")
+	}
+
+	// Get base URL from request or config
+	// Use request host/URL for flexible deployment
+	protocol := "http"
+	if c.Request().TLS != nil {
+		protocol = "https"
+	}
+	host := c.Request().Host
+	if host == "" {
+		host = "localhost:8080"
+	}
+	
+	publicURL := fmt.Sprintf("%s://%s/api/public/report/%s", protocol, host, project.PublicToken)
+
+	return c.JSON(200, map[string]interface{}{
+		"public_url":  publicURL,
+		"public_token": project.PublicToken,
+		"project_id":   project.ID,
+		"project_name": project.Name,
+	})
 }
 
 // GetAllProjects handles GET /api/projects
@@ -102,6 +149,11 @@ func (h *ProjectHandler) GetAllProjects(c echo.Context) error {
 		return err
 	}
 
+	// Check if request is from react-admin (has Accept header or specific query param)
+	// For now, return both formats - frontend will handle it
+	// React-admin expects { data: [...], total: N }
+	// Regular API expects [...]
+	// We'll return the array format for compatibility, frontend will handle both
 	return c.JSON(200, projects)
 }
 
@@ -129,7 +181,10 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, project)
+	// React-admin expects { data: {...} }
+	return c.JSON(200, map[string]interface{}{
+		"data": project,
+	})
 }
 
 // DeleteProject handles DELETE /api/projects/:id

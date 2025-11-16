@@ -1,0 +1,144 @@
+/* Error Container */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    margin: 16px 0;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.error-container-fullpage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 40px 20px;
+}
+
+/* Error Types */
+.error-error {
+    border: 1px solid #fcc;
+    background-color: #fee;
+}
+
+.error-warning {
+    border: 1px solid #fec;
+    background-color: #ffc;
+}
+
+.error-info {
+    border: 1px solid #cef;
+    background-color: #eff;
+}
+
+/* Error Content */
+.error-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    max-width: 600px;
+    text-align: left;
+}
+
+.error-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.error-text {
+    flex: 1;
+}
+
+.error-title {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.error-message {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #555;
+}
+
+/* Error type specific colors */
+.error-error .error-title {
+    color: #c33;
+}
+
+.error-error .error-message {
+    color: #a55;
+}
+
+.error-warning .error-title {
+    color: #c93;
+}
+
+.error-warning .error-message {
+    color: #a75;
+}
+
+.error-info .error-title {
+    color: #39c;
+}
+
+.error-info .error-message {
+    color: #57a;
+}
+
+/* Retry Button */
+.error-retry-button {
+    margin-top: 16px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background-color: #3498db;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.error-retry-button:hover {
+    background-color: #2980b9;
+}
+
+.error-retry-button:active {
+    transform: translateY(1px);
+}
+
+/* Dark theme support */
+[data-theme="dark"] .error-container {
+    background-color: #2a2a2a;
+}
+
+[data-theme="dark"] .error-error {
+    background-color: #3a2020;
+    border-color: #522;
+}
+
+[data-theme="dark"] .error-warning {
+    background-color: #3a3020;
+    border-color: #552;
+}
+
+[data-theme="dark"] .error-info {
+    background-color: #203a3a;
+    border-color: #255;
+}
+
+[data-theme="dark"] .error-title {
+    color: #eee;
+}
+
+[data-theme="dark"] .error-message {
+    color: #ccc;
+}
+

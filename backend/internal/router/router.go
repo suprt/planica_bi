@@ -23,6 +23,8 @@ func SetupRoutes(
 	goalService handlers.GoalServiceInterface,
 	directService handlers.DirectServiceInterface,
 	counterService handlers.CounterServiceInterface,
+	metricsService handlers.MetricsServiceInterface,
+	marketingService handlers.MarketingServiceInterface,
 	authService handlers.AuthServiceInterface,
 	userService handlers.UserServiceInterface,
 	userRepo repositories.UserRepositoryInterface,
@@ -57,6 +59,7 @@ func SetupRoutes(
 	countersHandler := handlers.NewCountersHandler(counterService)
 	directHandler := handlers.NewDirectHandler(directService)
 	goalsHandler := handlers.NewGoalsHandler(goalService)
+	metricsHandler := handlers.NewMetricsHandler(metricsService)
 	reportHandler := handlers.NewReportHandler(reportService, queueClient, cacheClient)
 	reportHandler.SetProjectService(projectService) // Set project service for public reports
 	syncHandler := handlers.NewSyncHandler(queueClient)
@@ -84,6 +87,9 @@ func SetupRoutes(
 	protected := api.Group("")
 	protected.Use(AuthMiddleware(authService))
 
+	// OAuth status (protected - requires authentication)
+	protected.GET("/oauth/status", oauthHandler.GetOAuthStatus)
+
 	// Project routes
 	// Create project (admin only)
 	adminOnly := protected.Group("")
@@ -99,8 +105,12 @@ func SetupRoutes(
 	projectRoutes := protected.Group("")
 	projectRoutes.Use(RequireProjectRole(userRepo, "admin", "manager", "client"))
 	projectRoutes.GET("/projects/:id", projectHandler.GetProject)
+	projectRoutes.GET("/projects/:id/public-link", projectHandler.GetPublicLink)
 	projectRoutes.GET("/projects/:id/counters", countersHandler.GetCounters)
 	projectRoutes.GET("/projects/:id/direct-accounts", directHandler.GetDirectAccounts)
+	projectRoutes.GET("/projects/:id/campaigns", directHandler.GetCampaigns)
+	projectRoutes.GET("/projects/:id/metrics", metricsHandler.GetMetrics)
+	projectRoutes.GET("/projects/:id/marketing", handlers.NewMarketingHandler(marketingService).GetMarketing)
 	projectRoutes.GET("/projects/:id/goals", goalsHandler.GetGoals)
 	projectRoutes.GET("/report/:id", reportHandler.GetReport)
 	projectRoutes.GET("/channel-metrics/:id", reportHandler.GetChannelMetrics)

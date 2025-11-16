@@ -110,15 +110,37 @@ func getEnvInt(key string, defaultValue int) int {
 // UpdateEnvFile updates or adds a key-value pair in .env file
 // For MVP: saves OAuth token to .env file
 func UpdateEnvFile(key, value string) error {
-	// Find .env file (usually in backend directory)
-	envPath := ".env"
-	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		// Try backend/.env
-		envPath = "backend/.env"
-		if _, err := os.Stat(envPath); os.IsNotExist(err) {
-			// Create new .env file if it doesn't exist
-			return createEnvFile(envPath, key, value)
+	// Find .env file - check multiple possible locations
+	// In Docker container, working dir is /root/, so .env is at /root/.env
+	// On host, it's at backend/.env
+	possiblePaths := []string{
+		"/root/.env",     // Docker container
+		".env",           // Current directory
+		"backend/.env",   // From project root
+		"./backend/.env", // Relative path
+	}
+
+	var envPath string
+	var found bool
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			envPath = path
+			found = true
+			break
 		}
+	}
+
+	if !found {
+		// Use /root/.env in Docker, or backend/.env on host
+		// Try to determine if we're in Docker by checking if /root exists
+		if _, err := os.Stat("/root"); err == nil {
+			envPath = "/root/.env"
+		} else {
+			envPath = "backend/.env"
+		}
+		// Create new .env file if it doesn't exist
+		return createEnvFile(envPath, key, value)
 	}
 
 	// Read existing .env file

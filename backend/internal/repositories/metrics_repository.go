@@ -56,3 +56,16 @@ func (r *MetricsRepository) GetAgeMetricsByGroup(ctx context.Context, projectID 
 	}
 	return &metrics, nil
 }
+
+// GetAllMonthlyMetricsForProject retrieves all monthly metrics for a project, ordered by year and month descending
+func (r *MetricsRepository) GetAllMonthlyMetricsForProject(ctx context.Context, projectID uint) ([]*models.MetricsMonthly, error) {
+	var metrics []*models.MetricsMonthly
+	err := r.db.WithContext(ctx).
+		Where("project_id = ?", projectID).
+		Order("year DESC, month DESC").
+		Find(&metrics).Error
+	if err != nil {
+		return nil, err
+	}
+	return metrics, nil
+}

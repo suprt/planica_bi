@@ -159,3 +159,16 @@ func (r *DirectRepository) GetCampaignMonthlyByCampaignID(ctx context.Context, p
 	}
 	return &metrics, nil
 }
+
+// GetCampaignsByProjectID retrieves all campaigns for a project (through accounts)
+func (r *DirectRepository) GetCampaignsByProjectID(ctx context.Context, projectID uint) ([]*models.DirectCampaign, error) {
+	var campaigns []*models.DirectCampaign
+	err := r.db.WithContext(ctx).
+		Joins("INNER JOIN direct_accounts ON direct_campaigns.direct_account_id = direct_accounts.id").
+		Where("direct_accounts.project_id = ?", projectID).
+		Find(&campaigns).Error
+	if err != nil {
+		return nil, err
+	}
+	return campaigns, nil
+}

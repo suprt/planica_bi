@@ -453,6 +453,59 @@
     outline-offset: 2px;
 }
 
+.yandex-auth-status {
+    margin-right: 10px;
+}
+
+.yandex-auth-button {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.yandex-auth-button.authorized {
+    background: #e8f5e9;
+    border-color: #4caf50;
+    color: #2e7d32;
+}
+
+.yandex-auth-button.not-authorized {
+    background: var(--bg-secondary);
+    border-color: #ff9800;
+    color: #f57c00;
+}
+
+.yandex-auth-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.yandex-auth-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+[data-theme="dark"] .yandex-auth-button.authorized {
+    background: #1b5e20;
+    border-color: #4caf50;
+    color: #81c784;
+}
+
+[data-theme="dark"] .yandex-auth-button.not-authorized {
+    background: #3e2723;
+    border-color: #ff9800;
+    color: #ffb74d;
+}
+
 .main-container {
     display: flex;
     flex: 1;
