@@ -1,93 +1,203 @@
-# Planica_BI
+# Planica BI
 
+Система бизнес-аналитики для агрегации и анализа данных из Яндекс.Метрики и Яндекс.Директа с использованием AI для выявления трендов и рекомендаций.
 
+## 🚀 Основные возможности
 
-## Getting started
+- **Интеграция с Яндекс.Метрикой и Яндекс.Директом** — автоматическая синхронизация данных
+- **Автоматическая генерация отчетов** — ежемесячные отчеты с анализом метрик
+- **AI-аналитика** — анализ данных с помощью Ollama и выдача рекомендаций
+- **Административная панель** — управление проектами, пользователями и ролями
+- **Публичные отчеты** — генерация публичных ссылок для отчетов
+- **Система ролей** — гибкое управление доступом на уровне проектов
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 🛠 Технологии
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+**Backend:**
+- Go 1.24+ (Echo framework)
+- MySQL 9.5
+- Redis 7
+- Asynq (асинхронные задачи)
+- GORM (ORM)
+- JWT аутентификация
 
-## Add your files
+**Frontend:**
+- React 19
+- TypeScript
+- React Router
+- React Admin (админ-панель)
+- Axios
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+**AI:**
+- Python 3
+- Ollama API
+
+**DevOps:**
+- Docker & Docker Compose
+- Nginx
+
+## 📋 Требования
+
+- Docker & Docker Compose
+- Git
+
+## ⚙️ Быстрый старт
+
+1. **Клонируйте репозиторий:**
+```bash
+git clone https://github.com/hackathonsrus/Kiber102_alch_go_200.git
+cd planica_bi
+```
+
+2. **Настройте переменные окружения:**
+Создайте файл `backend/.env` на основе `backend/.env.example`:
+```bash
+# Database
+DB_HOST=mysql
+DB_PORT=3306
+DB_USERNAME=reports
+DB_PASSWORD=1234
+DB_DATABASE=reports
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# App
+APP_PORT=8080
+APP_ENV=production
+
+# JWT
+JWT_SECRET=your-secret-key
+```
+
+3. **Запустите приложение:**
+```bash
+docker-compose up -d
+```
+
+4. **Проверьте статус:**
+```bash
+docker-compose ps
+```
+
+## 🌐 Доступ к приложению
+
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:8080
+- **Adminer (DB):** http://localhost:8081
+- **Redis:** localhost:6379
+
+## 🔐 Учетные данные по умолчанию
+
+Администратор:
+- Email: `admin@test.ru`
+- Password: `password123`
+
+## 📁 Структура проекта
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.ugatu.su/gantseff/planica_bi.git
-git branch -M master
-git push -uf origin master
+planica_bi/
+├── backend/              # Go backend
+│   ├── cmd/api/         # Точка входа
+│   ├── internal/        # Внутренние пакеты
+│   │   ├── handlers/    # HTTP handlers
+│   │   ├── services/    # Бизнес-логика
+│   │   ├── repositories/# Доступ к данным
+│   │   ├── models/      # Модели данных
+│   │   └── router/      # Маршрутизация
+│   ├── database/        # SQL миграции и seeds
+│   └── scripts/         # Python скрипты (AI анализ)
+├── frontend/            # React frontend
+│   ├── src/
+│   │   ├── pages/       # Страницы приложения
+│   │   ├── components/  # React компоненты
+│   │   ├── admin/       # React Admin панель
+│   │   └── services/    # API клиенты
+└── docker-compose.yml   # Docker конфигурация
 ```
 
-## Integrate with your tools
+## 🔄 API Endpoints
 
-- [ ] [Set up project integrations](https://gitlab.ugatu.su/gantseff/planica_bi/-/settings/integrations)
+### Аутентификация
+- `POST /api/auth/register` - Регистрация
+- `POST /api/auth/login` - Вход
 
-## Collaborate with your team
+### Проекты
+- `GET /api/projects` - Список проектов
+- `GET /api/projects/:id` - Детали проекта
+- `GET /api/projects/:id/public-link` - Публичная ссылка на отчет
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### Отчеты
+- `GET /api/reports/:projectId` - Получить отчет
+- `POST /api/reports/:projectId/generate` - Сгенерировать отчет
+- `GET /api/reports/:projectId/status` - Статус генерации
 
-## Test and Deploy
+### Синхронизация
+- `POST /api/sync/:projectId` - Принудительная синхронизация
 
-Use the built-in continuous integration in GitLab.
+### OAuth
+- `GET /api/oauth/yandex` - Инициализация OAuth
+- `GET /api/oauth/yandex/callback` - OAuth callback
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## 🔧 Разработка
 
-***
+### Backend
 
-# Editing this README
+```bash
+cd backend
+go run cmd/api/main.go
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Frontend
 
-## Suggestions for a good README
+```bash
+cd frontend
+npm install
+npm start
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Тестирование AI анализа
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+cd backend/scripts
+python analyze_metrics.py
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## 📝 Основные функции
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+1. **Автоматическая синхронизация** — ежедневная синхронизация данных из Яндекс.Метрики и Яндекс.Директа
+2. **Генерация отчетов** — автоматическая генерация отчетов с анализом метрик за 3 месяца
+3. **AI анализ** — автоматический анализ трендов и выдача рекомендаций
+4. **Управление доступом** — система ролей (admin, manager, viewer) на уровне проектов
+5. **Кэширование** — Redis кэш для ускорения работы с отчетами
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## 🐳 Docker команды
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```bash
+# Запуск
+docker-compose up -d
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+# Остановка
+docker-compose down
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+# Пересборка
+docker-compose build
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+# Логи
+docker-compose logs -f backend
+docker-compose logs -f frontend
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+# Перезапуск сервиса
+docker-compose restart backend
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## 📚 Дополнительная информация
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Логи приложения: `backend/storage/logs/app.log`
+- База данных инициализируется автоматически при первом запуске
+<<<<<<< HEAD
+- Тестовые данные загружаются из `backend/database/init/`
+=======
+- Тестовые данные загружаются из `backend/database/init/`
+>>>>>>> 14842a09ba46957b3c3f493f465c1890f2f417c5
