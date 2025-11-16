@@ -173,7 +173,74 @@ const Reports: React.FC = () => {
         ];
     };
 
+    const getDirectMetrics = (): MetricRow[] => {
+        if (!report || !report.direct.totals.length) {
+            return [];
+        }
+
+        const [d0, d1, d2] = report.direct.totals;
+
+        // Вычисляем динамику для Direct метрик
+        const calculateDynamics = (current: number, previous: number): number => {
+            if (previous === 0) return 0;
+            return ((current - previous) / previous) * 100;
+        };
+
+        return [
+            { 
+                name: 'Показы, кол-во', 
+                october: d0?.impressions || 0, 
+                september: d1?.impressions || 0, 
+                august: d2?.impressions || 0, 
+                efficiency: d1 ? calculateDynamics(d0?.impressions || 0, d1.impressions) : 0
+            },
+            { 
+                name: 'Клики, кол-во', 
+                october: d0?.clicks || 0, 
+                september: d1?.clicks || 0, 
+                august: d2?.clicks || 0, 
+                efficiency: d1 ? calculateDynamics(d0?.clicks || 0, d1.clicks) : 0
+            },
+            { 
+                name: 'CTR, %', 
+                october: `${(d0?.ctr || 0).toFixed(2)}%`, 
+                september: `${(d1?.ctr || 0).toFixed(2)}%`, 
+                august: `${(d2?.ctr || 0).toFixed(2)}%`, 
+                efficiency: d1 ? calculateDynamics(d0?.ctr || 0, d1.ctr) : 0
+            },
+            { 
+                name: 'CPC, руб.', 
+                october: `${(d0?.cpc || 0).toFixed(2)}`, 
+                september: `${(d1?.cpc || 0).toFixed(2)}`, 
+                august: `${(d2?.cpc || 0).toFixed(2)}`, 
+                efficiency: d1 ? calculateDynamics(d0?.cpc || 0, d1.cpc) : 0
+            },
+            { 
+                name: 'CPA, руб.', 
+                october: d0?.cpa ? `${d0.cpa.toFixed(2)}` : '-', 
+                september: d1?.cpa ? `${d1.cpa.toFixed(2)}` : '-', 
+                august: d2?.cpa ? `${d2.cpa.toFixed(2)}` : '-', 
+                efficiency: (d1?.cpa && d0?.cpa) ? calculateDynamics(d0.cpa, d1.cpa) : 0
+            },
+            { 
+                name: 'Расходы, руб.', 
+                october: `${(d0?.cost || 0).toFixed(2)}`, 
+                september: `${(d1?.cost || 0).toFixed(2)}`, 
+                august: `${(d2?.cost || 0).toFixed(2)}`, 
+                efficiency: d1 ? calculateDynamics(d0?.cost || 0, d1.cost) : 0
+            },
+            { 
+                name: 'Конверсии, кол-во', 
+                october: d0?.conv || '-', 
+                september: d1?.conv || '-', 
+                august: d2?.conv || '-', 
+                efficiency: (d1?.conv !== undefined && d0?.conv !== undefined) ? calculateDynamics(d0.conv, d1.conv) : 0
+            },
+        ];
+    };
+
     const metrics = getMetrics();
+    const directMetrics = getDirectMetrics();
 
     const formatEfficiency = (value: number): string => {
         if (value === 0) return '0.00%';
@@ -186,8 +253,22 @@ const Reports: React.FC = () => {
             'Время на сайте',
             'Конверсия',
             'Посетители',
-            'Визиты'
+            'Визиты',
+            'Клики',
+            'Показы',
+            'CTR',
+            'Конверсии'
         ];
+        const negativeMetrics = [
+            'Кол-во отказов',
+            'CPC',
+            'CPA',
+            'Расходы'
+        ];
+        // Для Direct метрик: CPC, CPA, Расходы - меньше лучше (отрицательная динамика = хорошо)
+        if (negativeMetrics.some(metric => metricName.includes(metric))) {
+            return false;
+        }
         return positiveMetrics.some(metric => metricName.includes(metric));
     };
 
@@ -432,33 +513,71 @@ const Reports: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="reports-table-container">
-                    <table className="reports-table">
-                        <thead>
-                            <tr>
-                                <th className="metric-name-col">Показатель</th>
-                                <th>{report.periods[0] || 'Месяц 1'}</th>
-                                <th>{report.periods[1] || 'Месяц 2'}</th>
-                                <th>{report.periods[2] || 'Месяц 3'}</th>
-                                <th className="efficiency-col">Эффективность, %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {metrics.map((metric, index) => (
-                                <tr key={index}>
-                                    <td className="metric-name">{metric.name}</td>
-                                    <td>{metric.october}</td>
-                                    <td>{metric.september}</td>
-                                    <td>{metric.august}</td>
-                                    <td className={`efficiency ${getEfficiencyClass(metric.efficiency, metric.name)}`}>
-                                        <span className="efficiency-icon">{getEfficiencyIcon(metric.efficiency)}</span>
-                                        {formatEfficiency(metric.efficiency)}
-                                    </td>
+                {/* Metrica Section */}
+                <div className="reports-section">
+                    <h2 className="section-title">Яндекс.Метрика</h2>
+                    <div className="reports-table-container">
+                        <table className="reports-table">
+                            <thead>
+                                <tr>
+                                    <th className="metric-name-col">Показатель</th>
+                                    <th>{report.periods[0] || 'Месяц 1'}</th>
+                                    <th>{report.periods[1] || 'Месяц 2'}</th>
+                                    <th>{report.periods[2] || 'Месяц 3'}</th>
+                                    <th className="efficiency-col">Эффективность, %</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {metrics.map((metric, index) => (
+                                    <tr key={index}>
+                                        <td className="metric-name">{metric.name}</td>
+                                        <td>{metric.october}</td>
+                                        <td>{metric.september}</td>
+                                        <td>{metric.august}</td>
+                                        <td className={`efficiency ${getEfficiencyClass(metric.efficiency, metric.name)}`}>
+                                            <span className="efficiency-icon">{getEfficiencyIcon(metric.efficiency)}</span>
+                                            {formatEfficiency(metric.efficiency)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                {/* Direct Section */}
+                {directMetrics.length > 0 && (
+                    <div className="reports-section">
+                        <h2 className="section-title">Яндекс.Директ</h2>
+                        <div className="reports-table-container">
+                            <table className="reports-table">
+                                <thead>
+                                    <tr>
+                                        <th className="metric-name-col">Показатель</th>
+                                        <th>{report.periods[0] || 'Месяц 1'}</th>
+                                        <th>{report.periods[1] || 'Месяц 2'}</th>
+                                        <th>{report.periods[2] || 'Месяц 3'}</th>
+                                        <th className="efficiency-col">Эффективность, %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {directMetrics.map((metric, index) => (
+                                        <tr key={index}>
+                                            <td className="metric-name">{metric.name}</td>
+                                            <td>{metric.october}</td>
+                                            <td>{metric.september}</td>
+                                            <td>{metric.august}</td>
+                                            <td className={`efficiency ${getEfficiencyClass(metric.efficiency, metric.name)}`}>
+                                                <span className="efficiency-icon">{getEfficiencyIcon(metric.efficiency)}</span>
+                                                {formatEfficiency(metric.efficiency)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
                 
                 {report.ai_insights && report.ai_insights.summary && (
                     <div className="ai-insights">

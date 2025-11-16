@@ -22,11 +22,13 @@ def analyze_channel(name, ch):
     if len(cpc) < 2 or len(ctr) < 2 or len(cpa) < 2 or len(conv) < 2:
         return out
     
-    # Динамика (сравнение последнего периода с предыдущим)
-    dcpc = (cpc[-1] - cpc[-2]) / cpc[-2] * 100 if cpc[-2] != 0 else 0
-    dctr = (ctr[-1] - ctr[-2]) / ctr[-2] * 100 if ctr[-2] != 0 else 0
-    dcpa = (cpa[-1] - cpa[-2]) / cpa[-2] * 100 if cpa[-2] != 0 else 0
-    dconv = (conv[-1] - conv[-2]) / conv[-2] * 100 if conv[-2] != 0 else 0
+    # Динамика (сравнение текущего периода с предыдущим)
+    # Периоды идут от нового к старому: [текущий, предыдущий, старый]
+    # Сравниваем первый (текущий) с вторым (предыдущим)
+    dcpc = (cpc[0] - cpc[1]) / cpc[1] * 100 if cpc[1] != 0 else 0
+    dctr = (ctr[0] - ctr[1]) / ctr[1] * 100 if ctr[1] != 0 else 0
+    dcpa = (cpa[0] - cpa[1]) / cpa[1] * 100 if cpa[1] != 0 else 0
+    dconv = (conv[0] - conv[1]) / conv[1] * 100 if conv[1] != 0 else 0
     
     if dctr > 5:
         out.append(f"CTR {name} вырос на {dctr:.1f}% — объявления стали привлекательнее.")
