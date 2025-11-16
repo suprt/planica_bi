@@ -232,8 +232,9 @@
 .ai-insights {
     margin-top: 40px;
     padding: 24px;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 8px;
+    border: 1px solid var(--border-color);
     border-left: 4px solid #1976d2;
 }
 
@@ -241,7 +242,7 @@
     margin-top: 0;
     margin-bottom: 16px;
     font-size: 24px;
-    color: #1976d2;
+    color: var(--text-primary);
 }
 
 .ai-summary {
@@ -250,7 +251,7 @@
 
 .ai-summary p {
     line-height: 1.6;
-    color: #333;
+    color: var(--text-primary);
     font-size: 16px;
     white-space: pre-wrap;
 }
@@ -258,14 +259,14 @@
 .ai-recommendations {
     margin-top: 24px;
     padding-top: 24px;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--border-color);
 }
 
 .ai-recommendations h3 {
     margin-top: 0;
     margin-bottom: 12px;
     font-size: 18px;
-    color: #495057;
+    color: var(--text-primary);
 }
 
 .ai-recommendations ul {
@@ -276,7 +277,7 @@
 .ai-recommendations li {
     margin-bottom: 8px;
     line-height: 1.6;
-    color: #495057;
+    color: var(--text-primary);
 }
 
 @media (max-width: 768px) {

@@ -101,6 +101,8 @@ const Reports: React.FC = () => {
                     // Это полноценный отчет
                     setReport(data as Report);
                     console.log('✅ [Reports] Report loaded successfully');
+                    console.log('📊 [Reports] Direct totals:', (data as Report).direct?.totals?.length || 0);
+                    console.log('📊 [Reports] Direct data:', (data as Report).direct);
                 }
             } catch (err: any) {
                 const errorMessage = err.response?.data?.error || 
@@ -174,11 +176,22 @@ const Reports: React.FC = () => {
     };
 
     const getDirectMetrics = (): MetricRow[] => {
-        if (!report || !report.direct.totals.length) {
+        if (!report) {
+            console.log('⚠️ [Reports] No report data');
+            return [];
+        }
+        
+        if (!report.direct || !report.direct.totals || report.direct.totals.length === 0) {
+            console.log('⚠️ [Reports] No Direct totals data', {
+                hasDirect: !!report.direct,
+                totalsLength: report.direct?.totals?.length || 0,
+                direct: report.direct
+            });
             return [];
         }
 
         const [d0, d1, d2] = report.direct.totals;
+        console.log('📊 [Reports] Direct metrics data:', { d0, d1, d2 });
 
         // Вычисляем динамику для Direct метрик
         const calculateDynamics = (current: number, previous: number): number => {
