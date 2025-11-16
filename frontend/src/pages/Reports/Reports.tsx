@@ -493,39 +493,41 @@ const Reports: React.FC = () => {
         <div className="reports-page">
             {renderHeader()}
 
-            <div className="reports-content">
-                <div className="reports-summary">
-                    <div className="summary-card">
-                        <div className="summary-label">Трафик</div>
-                        <div className={`summary-value ${summaryData.traffic < 0 ? 'negative' : 'positive'}`}>
-                            <span className="summary-arrow">{summaryData.traffic < 0 ? '↓' : '↑'}</span>
-                            <span className="summary-text">
-                                {summaryData.traffic < 0 ? 'Упал' : 'Вырос'} на {Math.abs(summaryData.traffic).toFixed(2)}%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="summary-card">
-                        <div className="summary-label">Число конверсий</div>
-                        <div className={`summary-value ${summaryData.conversions < 0 ? 'negative' : 'positive'}`}>
-                            <span className="summary-arrow">{summaryData.conversions < 0 ? '↓' : '↑'}</span>
-                            <span className="summary-text">
-                                {summaryData.conversions < 0 ? 'Упало' : 'Выросло'} на {Math.abs(summaryData.conversions).toFixed(2)}%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="summary-card">
-                        <div className="summary-label">Количество отказов</div>
-                        <div className={`summary-value ${summaryData.bounce > 0 ? 'negative' : 'positive'}`}>
-                            <span className="summary-arrow">{summaryData.bounce > 0 ? '↑' : '↓'}</span>
-                            <span className="summary-text">
-                                {summaryData.bounce > 0 ? 'Выросло' : 'Упало'} на {Math.abs(summaryData.bounce).toFixed(2)}%
-                            </span>
-                        </div>
+            {/* Summary Cards */}
+            <div className="reports-summary">
+                <div className="summary-card">
+                    <div className="summary-label">Трафик</div>
+                    <div className={`summary-value ${summaryData.traffic < 0 ? 'negative' : 'positive'}`}>
+                        <span className="summary-arrow">{summaryData.traffic < 0 ? '↓' : '↑'}</span>
+                        <span className="summary-text">
+                            {summaryData.traffic < 0 ? 'Упал' : 'Вырос'} на {Math.abs(summaryData.traffic).toFixed(2)}%
+                        </span>
                     </div>
                 </div>
 
+                <div className="summary-card">
+                    <div className="summary-label">Число конверсий</div>
+                    <div className={`summary-value ${summaryData.conversions < 0 ? 'negative' : 'positive'}`}>
+                        <span className="summary-arrow">{summaryData.conversions < 0 ? '↓' : '↑'}</span>
+                        <span className="summary-text">
+                            {summaryData.conversions < 0 ? 'Упало' : 'Выросло'} на {Math.abs(summaryData.conversions).toFixed(2)}%
+                        </span>
+                    </div>
+                </div>
+
+                <div className="summary-card">
+                    <div className="summary-label">Количество отказов</div>
+                    <div className={`summary-value ${summaryData.bounce > 0 ? 'negative' : 'positive'}`}>
+                        <span className="summary-arrow">{summaryData.bounce > 0 ? '↑' : '↓'}</span>
+                        <span className="summary-text">
+                            {summaryData.bounce > 0 ? 'Выросло' : 'Упало'} на {Math.abs(summaryData.bounce).toFixed(2)}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Data Sections */}
+            <div className="reports-content">
                 {/* Metrica Section */}
                 <div className="reports-section">
                     <h2 className="section-title">Яндекс.Метрика</h2>
@@ -591,26 +593,27 @@ const Reports: React.FC = () => {
                         </div>
                     </div>
                 )}
-                
-                {report.ai_insights && report.ai_insights.summary && (
-                    <div className="ai-insights">
-                        <h2>🤖 AI Анализ</h2>
-                        <div className="ai-summary">
-                            <p>{report.ai_insights.summary}</p>
-                        </div>
-                        {report.ai_insights.recommendations && report.ai_insights.recommendations.length > 0 && (
-                            <div className="ai-recommendations">
-                                <h3>Рекомендации:</h3>
-                                <ul>
-                                    {report.ai_insights.recommendations.map((rec, idx) => (
-                                        <li key={idx}>{rec}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
+            
+            {/* AI Insights Section */}
+            {report.ai_insights && report.ai_insights.summary && (
+                <div className="ai-insights">
+                    <h2>🤖 AI Анализ</h2>
+                    <div className="ai-summary">
+                        <p>{report.ai_insights.summary}</p>
+                    </div>
+                    {report.ai_insights.recommendations && report.ai_insights.recommendations.length > 0 && (
+                        <div className="ai-recommendations">
+                            <h3>Рекомендации:</h3>
+                            <ul>
+                                {report.ai_insights.recommendations.map((rec, idx) => (
+                                    <li key={idx}>{rec}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

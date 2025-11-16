@@ -2784,3 +2784,35 @@
 {"level":"info","timestamp":"2025-11-16T04:32:49.928Z","caller":"queue/worker.go:334","msg":"Report generation task completed","project_id":2,"has_ai_insights":true}
 {"level":"info","timestamp":"2025-11-16T04:32:50.646Z","caller":"queue/worker.go:304","msg":"AI analysis added to report","project_id":2,"has_insights":true,"summary_preview":"Кампания демонстрирует положительную динамику: обнов\ufffd..."}
 {"level":"info","timestamp":"2025-11-16T04:32:50.646Z","caller":"queue/worker.go:334","msg":"Report generation task completed","project_id":2,"has_ai_insights":true}
+{"level":"info","timestamp":"2025-11-16T04:33:14.012Z","caller":"handlers/report_handler.go:53","msg":"[REPORT HANDLER] GetReport ENTRY","path":"/api/report/:id","param_id":"2"}
+{"level":"info","timestamp":"2025-11-16T04:33:14.013Z","caller":"handlers/report_handler.go:69","msg":"[REPORT HANDLER] GetReport processing","project_id":2,"cache_is_nil":false,"queue_client_is_nil":false}
+{"level":"info","timestamp":"2025-11-16T04:33:14.014Z","caller":"handlers/report_handler.go:83","msg":"Report retrieved from cache","project_id":2,"cache_key":"report:project:2"}
+{"level":"info","timestamp":"2025-11-16T04:33:14.015Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/report/2","remote_ip":"172.18.0.1","status":200,"latency":0.003324703,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:33:14.045Z","caller":"handlers/oauth_handler.go:223","msg":"OAuth status check","token_preview":"y0__xCQrf5cGNHMOyDpm...","is_valid":true,"has_token":true}
+{"level":"info","timestamp":"2025-11-16T04:33:14.045Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/oauth/status","remote_ip":"172.18.0.1","status":200,"latency":0.034686057,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:37:43.645Z","caller":"handlers/report_handler.go:53","msg":"[REPORT HANDLER] GetReport ENTRY","path":"/api/report/:id","param_id":"2"}
+{"level":"info","timestamp":"2025-11-16T04:37:43.646Z","caller":"handlers/report_handler.go:69","msg":"[REPORT HANDLER] GetReport processing","project_id":2,"cache_is_nil":false,"queue_client_is_nil":false}
+{"level":"info","timestamp":"2025-11-16T04:37:43.647Z","caller":"handlers/report_handler.go:83","msg":"Report retrieved from cache","project_id":2,"cache_key":"report:project:2"}
+{"level":"info","timestamp":"2025-11-16T04:37:43.648Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/report/2","remote_ip":"172.18.0.1","status":200,"latency":0.003918673,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:37:43.913Z","caller":"handlers/oauth_handler.go:223","msg":"OAuth status check","token_preview":"y0__xCQrf5cGNHMOyDpm...","is_valid":true,"has_token":true}
+{"level":"info","timestamp":"2025-11-16T04:37:43.913Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/oauth/status","remote_ip":"172.18.0.1","status":200,"latency":0.268485239,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:38:05.058Z","caller":"api/main.go:167","msg":"Shutting down server..."}
+{"level":"fatal","timestamp":"2025-11-16T04:38:05.059Z","caller":"api/main.go:161","msg":"Server failed to start","error":"http: Server closed","stacktrace":"main.main.func2\n\t/app/cmd/api/main.go:161"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.412Z","caller":"api/main.go:34","msg":"Application starting","env":"production","version":"1.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.420Z","caller":"database/database.go:50","msg":"Database connection established"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.421Z","caller":"api/main.go:46","msg":"Database connection established"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.669Z","caller":"database/database.go:81","msg":"Database migrations completed"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.670Z","caller":"api/main.go:53","msg":"Database migrations completed"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.673Z","caller":"api/main.go:61","msg":"Cache connection established"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.674Z","caller":"api/main.go:120","msg":"Queue worker starting"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.674Z","caller":"cron/scheduler.go:57","msg":"Daily sync scheduled","schedule":"02:00 MSK daily"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.675Z","caller":"cron/scheduler.go:76","msg":"Monthly finalization scheduled","schedule":"07:00 MSK on 1st of month"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.675Z","caller":"cron/scheduler.go:84","msg":"Cron scheduler started"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.676Z","caller":"api/main.go:133","msg":"Cron scheduler initialized and started"}
+{"level":"info","timestamp":"2025-11-16T04:39:51.677Z","caller":"api/main.go:159","msg":"Server starting","address":":8080"}
+{"level":"info","timestamp":"2025-11-16T04:40:09.511Z","caller":"handlers/report_handler.go:53","msg":"[REPORT HANDLER] GetReport ENTRY","path":"/api/report/:id","param_id":"2"}
+{"level":"info","timestamp":"2025-11-16T04:40:09.511Z","caller":"handlers/report_handler.go:69","msg":"[REPORT HANDLER] GetReport processing","project_id":2,"cache_is_nil":false,"queue_client_is_nil":false}
+{"level":"info","timestamp":"2025-11-16T04:40:09.512Z","caller":"handlers/report_handler.go:83","msg":"Report retrieved from cache","project_id":2,"cache_key":"report:project:2"}
+{"level":"info","timestamp":"2025-11-16T04:40:09.512Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/report/2","remote_ip":"172.18.0.1","status":200,"latency":0.00984434,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
+{"level":"info","timestamp":"2025-11-16T04:40:09.679Z","caller":"handlers/oauth_handler.go:223","msg":"OAuth status check","token_preview":"y0__xCQrf5cGNHMOyDpm...","is_valid":true,"has_token":true}
+{"level":"info","timestamp":"2025-11-16T04:40:09.679Z","caller":"router/middleware.go:62","msg":"HTTP request","method":"GET","path":"/api/oauth/status","remote_ip":"172.18.0.1","status":200,"latency":0.176426498,"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"}
