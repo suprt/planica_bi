@@ -17,3 +17,8 @@ type DirectTotalsMonthly struct {
 	Cost        float64   `gorm:"type:decimal(14,2);not null;default:0" json:"cost"`
 	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
+
+// TableName specifies the table name for DirectTotalsMonthly
+func (DirectTotalsMonthly) TableName() string {
+	return "direct_totals_monthly"
+}

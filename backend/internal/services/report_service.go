@@ -304,8 +304,8 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 		// Get SEO summary (organic visitors and conversions)
 		// For now, we can use Metrica metrics as a base, but ideally should filter by organic traffic
 		// TODO: Add proper organic traffic filtering via Metrica API with source segment
-		metrics, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, pd.year, pd.month)
-		if err == nil && metrics != nil {
+		// Reuse metrics from earlier in the loop (already fetched at line 207)
+		if metrics != nil {
 			// Calculate organic visitors as a percentage of total (rough estimate: 30-50% is typical for organic)
 			// In production, this should come from Metrica API with organic segment filter
 			organicVisitors := int(float64(metrics.Users) * 0.4) // Rough estimate: 40% organic
