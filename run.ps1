@@ -9,10 +9,10 @@ param(
 # Environment file path
 $EnvFile = "backend\.env"
 
-# Helper function to run docker-compose with env file
+# Helper function to run docker compose with env file
 function Invoke-DockerCompose {
     param([string]$Args)
-    docker-compose --env-file $EnvFile $Args
+    docker compose --env-file $EnvFile $Args
 }
 
 function Show-Help {
