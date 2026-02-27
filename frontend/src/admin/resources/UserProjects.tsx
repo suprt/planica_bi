@@ -72,7 +72,7 @@ export const UserProjects: React.FC = () => {
 
         try {
             const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-            const token = localStorage.getItem('auth_token');
+            const token = sessionStorage.getItem('auth_token');
 
             const response = await fetch(`${apiUrl}/projects/${selectedProjectId}/users`, {
                 method: 'POST',
@@ -113,7 +113,7 @@ export const UserProjects: React.FC = () => {
 
         try {
             const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-            const token = localStorage.getItem('auth_token');
+            const token = sessionStorage.getItem('auth_token');
 
             const response = await fetch(`${apiUrl}/projects/${projectId}/users/${record.id}`, {
                 method: 'PUT',
@@ -155,7 +155,7 @@ export const UserProjects: React.FC = () => {
 
         try {
             const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-            const token = localStorage.getItem('auth_token');
+            const token = sessionStorage.getItem('auth_token');
 
             const response = await fetch(`${apiUrl}/projects/${projectId}/users/${record.id}`, {
                 method: 'DELETE',

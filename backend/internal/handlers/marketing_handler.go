@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -46,4 +46,3 @@ func (h *MarketingHandler) GetMarketing(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, marketingData)
 }
-

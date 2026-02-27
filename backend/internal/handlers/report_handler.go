@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/cache"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/queue"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 

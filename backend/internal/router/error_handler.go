@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/logger"
 )
 
 // customErrorHandler handles all errors returned by handlers

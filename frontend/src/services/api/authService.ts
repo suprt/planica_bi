@@ -50,7 +50,7 @@ export interface AuthResponse {
 }
 
 /**
- * Ключи для хранения в localStorage
+ * Ключи для хранения в sessionStorage
  */
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -114,13 +114,13 @@ export const authService = {
     },
 
     /**
-     * Сохранение JWT токена в localStorage
-     * 
+     * Сохранение JWT токена в sessionStorage
+     *
      * @param token - JWT токен
      */
     setToken(token: string): void {
         try {
-            localStorage.setItem(TOKEN_KEY, token);
+            sessionStorage.setItem(TOKEN_KEY, token);
             console.log('[AuthService] Token saved');
         } catch (error) {
             console.error('[AuthService] Failed to save token:', error);
@@ -128,13 +128,13 @@ export const authService = {
     },
 
     /**
-     * Сохранение данных пользователя в localStorage
-     * 
+     * Сохранение данных пользователя в sessionStorage
+     *
      * @param user - Данные пользователя
      */
     setUser(user: User): void {
         try {
-            localStorage.setItem(USER_KEY, JSON.stringify(user));
+            sessionStorage.setItem(USER_KEY, JSON.stringify(user));
             console.log('[AuthService] User data saved');
         } catch (error) {
             console.error('[AuthService] Failed to save user data:', error);
@@ -142,13 +142,13 @@ export const authService = {
     },
 
     /**
-     * Получение данных пользователя из localStorage
-     * 
+     * Получение данных пользователя из sessionStorage
+     *
      * @returns Данные пользователя или null
      */
     getUser(): User | null {
         try {
-            const userData = localStorage.getItem(USER_KEY);
+            const userData = sessionStorage.getItem(USER_KEY);
             if (!userData) {
                 return null;
             }
@@ -160,13 +160,13 @@ export const authService = {
     },
 
     /**
-     * Получение JWT токена из localStorage
-     * 
+     * Получение JWT токена из sessionStorage
+     *
      * @returns JWT токен или null если не авторизован
      */
     getToken(): string | null {
         try {
-            return localStorage.getItem(TOKEN_KEY);
+            return sessionStorage.getItem(TOKEN_KEY);
         } catch (error) {
             console.error('[AuthService] Failed to get token:', error);
             return null;
@@ -174,13 +174,13 @@ export const authService = {
     },
 
     /**
-     * Удаление JWT токена из localStorage
+     * Удаление JWT токена из sessionStorage
      * Вызывается при выходе из системы
      */
     removeToken(): void {
         try {
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
+            sessionStorage.removeItem(TOKEN_KEY);
+            sessionStorage.removeItem(USER_KEY);
             console.log('[AuthService] Token and user data removed');
         } catch (error) {
             console.error('[AuthService] Failed to remove token:', error);

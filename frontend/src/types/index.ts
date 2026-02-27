@@ -33,3 +33,5 @@ export interface SearchResult {
     title: string;
     description?: string;
 }
+
+export * from './marketing';

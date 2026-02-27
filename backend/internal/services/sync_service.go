@@ -5,32 +5,30 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/integrations"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/integrations"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/models"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // SyncService handles data synchronization with Yandex APIs
 type SyncService struct {
-	projectRepo   *repositories.ProjectRepository
-	metricsRepo   *repositories.MetricsRepository
-	directRepo    *repositories.DirectRepository
-	counterRepo   *repositories.CounterRepository
-	goalRepo      *repositories.GoalRepository
+	projectRepo   ProjectRepositoryInterface
+	metricsRepo   MetricsRepositoryInterface
+	directRepo    DirectRepositoryInterface
+	counterRepo   CounterRepositoryInterface
+	goalRepo      GoalRepositoryInterface
 	metricaClient *integrations.YandexMetricaClient
 	directClient  *integrations.YandexDirectClient
 }
 
 // NewSyncService creates a new sync service
 func NewSyncService(
-	projectRepo *repositories.ProjectRepository,
-	metricsRepo *repositories.MetricsRepository,
-	directRepo *repositories.DirectRepository,
-	counterRepo *repositories.CounterRepository,
-	goalRepo *repositories.GoalRepository,
+	projectRepo ProjectRepositoryInterface,
+	metricsRepo MetricsRepositoryInterface,
+	directRepo DirectRepositoryInterface,
+	counterRepo CounterRepositoryInterface,
+	goalRepo GoalRepositoryInterface,
 	metricaClient *integrations.YandexMetricaClient,
 	directClient *integrations.YandexDirectClient,
 ) *SyncService {
@@ -204,7 +202,7 @@ func (s *SyncService) SyncMetricaData(ctx context.Context, projectID uint, year,
 
 	// Check if record exists
 	existing, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, year, month)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil {
 		return err
 	}
 
@@ -308,7 +306,7 @@ func (s *SyncService) SyncDirectData(ctx context.Context, projectID uint, year, 
 
 	// Check if record exists
 	existing, err := s.directRepo.GetTotalsMonthly(ctx, projectID, year, month)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil {
 		return err
 	}
 
@@ -463,7 +461,7 @@ func (s *SyncService) parseAndSaveAgeMetrics(ctx context.Context, data interface
 
 		if err == nil && existing != nil {
 			ageMetrics.ID = existing.ID
-		} else if err != nil && err != gorm.ErrRecordNotFound {
+		} else if err != nil {
 			return err
 		}
 
@@ -509,7 +507,7 @@ func (s *SyncService) parseAndSaveAgeMetricsTyped(ctx context.Context, ageResult
 
 		if err == nil && existing != nil {
 			ageMetrics.ID = existing.ID
-		} else if err != nil && err != gorm.ErrRecordNotFound {
+		} else if err != nil {
 			return err
 		}
 
@@ -738,7 +736,7 @@ func (s *SyncService) parseAndSaveCampaignMetrics(ctx context.Context, data inte
 
 		if err == nil && existing != nil {
 			campaignMetrics.ID = existing.ID
-		} else if err != nil && err != gorm.ErrRecordNotFound {
+		} else if err != nil {
 			continue
 		}
 

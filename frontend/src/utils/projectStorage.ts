@@ -1,5 +1,5 @@
 /**
- * Утилита для работы с последним выбранным проектом в localStorage
+ * Утилита для работы с последним выбранным проектом в sessionStorage
  */
 
 const LAST_PROJECT_KEY = 'last_selected_project_id';
@@ -14,7 +14,7 @@ export const projectStorage = {
                 console.error('[ProjectStorage] Invalid project ID:', projectId);
                 return;
             }
-            localStorage.setItem(LAST_PROJECT_KEY, projectId.toString());
+            sessionStorage.setItem(LAST_PROJECT_KEY, projectId.toString());
             console.log('[ProjectStorage] Last project saved:', projectId);
         } catch (error) {
             console.error('[ProjectStorage] Error saving last project:', error);
@@ -26,7 +26,7 @@ export const projectStorage = {
      */
     getLastProject(): number | null {
         try {
-            const projectId = localStorage.getItem(LAST_PROJECT_KEY);
+            const projectId = sessionStorage.getItem(LAST_PROJECT_KEY);
             if (!projectId) {
                 return null;
             }
@@ -46,7 +46,7 @@ export const projectStorage = {
      */
     clearLastProject(): void {
         try {
-            localStorage.removeItem(LAST_PROJECT_KEY);
+            sessionStorage.removeItem(LAST_PROJECT_KEY);
             console.log('[ProjectStorage] Last project cleared');
         } catch (error) {
             console.error('[ProjectStorage] Error clearing last project:', error);

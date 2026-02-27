@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/services"
 )
 
 // DirectServiceInterface defines methods for Direct operations

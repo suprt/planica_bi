@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/cache"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -255,7 +255,7 @@ func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) err
 			zap.Strings("periods", report.Periods),
 		)
 	}
-	
+
 	metricsData, err := w.reportService.GetChannelMetrics(ctx, payload.ProjectID, report.Periods)
 	if err != nil {
 		if logger.Log != nil {
@@ -271,7 +271,7 @@ func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) err
 				zap.Int("channels_count", len(metricsData.Metrics)),
 			)
 		}
-		
+
 		// Analyze metrics using AI
 		aiResult, err := w.reportService.AnalyzeChannelMetrics(ctx, metricsData)
 		if err != nil {
@@ -286,16 +286,16 @@ func (w *Worker) handleGenerateReport(ctx context.Context, task *asynq.Task) err
 			aiInsights := &services.AiInsights{
 				Summary: aiResult.AnalyticalFacts,
 			}
-			
+
 			// If AI report is available, use it; otherwise use analytical facts
 			if aiResult.AIReport != "" {
 				aiInsights.Summary = aiResult.AIReport
 			}
-			
+
 			// Split recommendations if available (for now, just use summary as recommendations)
 			// TODO: Parse AI report to extract recommendations if format allows
 			report.AiInsights = aiInsights
-			
+
 			if logger.Log != nil {
 				summaryPreview := aiInsights.Summary
 				if len(summaryPreview) > 100 {
@@ -347,5 +347,14 @@ func (w *Worker) Start() error {
 
 // Shutdown gracefully shuts down the worker
 func (w *Worker) Shutdown() {
-	w.server.Shutdown()
+	if w.server != nil {
+		// Shutdown with context for graceful termination
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		w.server.Shutdown()
+
+		// Wait for context timeout or server to stop
+		<-ctx.Done()
+	}
 }

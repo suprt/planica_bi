@@ -1,15 +1,30 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
+
+type UserServiceInterface interface {
+	GetAllUsers(ctx context.Context) ([]services.UserResponse, error)
+	GetAllUsersPaginated(ctx context.Context, pagination *middleware.Pagination) ([]services.UserResponse, int64, error)
+	GetUserByID(ctx context.Context, userID uint) (*services.UserResponse, error)
+	CreateUser(ctx context.Context, req *services.CreateUserRequest) (*services.UserResponse, error)
+	UpdateUser(ctx context.Context, userID uint, req *services.UpdateUserRequest) (*services.UserResponse, error)
+	DeleteUser(ctx context.Context, userID uint) error
+	GetProjectUsers(ctx context.Context, projectID uint) ([]services.UserResponse, error)
+	AssignRole(ctx context.Context, req *services.AssignRoleRequest) error
+	UpdateRole(ctx context.Context, userID, projectID uint, role string) error
+	RemoveRole(ctx context.Context, userID, projectID uint) error
+}
 
 // UserHandler handles HTTP requests for user management
 type UserHandler struct {
@@ -28,7 +43,10 @@ func NewUserHandler(userService UserServiceInterface) *UserHandler {
 func (h *UserHandler) GetAllUsers(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	users, err := h.userService.GetAllUsers(ctx)
+	// Get pagination parameters
+	pagination := middleware.GetPagination(c)
+
+	users, total, err := h.userService.GetAllUsersPaginated(ctx, pagination)
 	if err != nil {
 		logger.Log.Error("Failed to get users", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -39,7 +57,7 @@ func (h *UserHandler) GetAllUsers(c echo.Context) error {
 	// React-admin expects { data: [...], total: N }
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data":  users,
-		"total": len(users),
+		"total": total,
 	})
 }
 
@@ -82,6 +100,11 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 		})
 	}
 
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
+	}
+
 	user, err := h.userService.CreateUser(ctx, &req)
 	if err != nil {
 		logger.Log.Error("Failed to create user", zap.Error(err))
@@ -116,6 +139,11 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid request body",
 		})
+	}
+
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
 	}
 
 	user, err := h.userService.UpdateUser(ctx, uint(userID), &req)
@@ -188,4 +216,3 @@ func (h *UserHandler) GetUserProjects(c echo.Context) error {
 		"total": len(user.Projects),
 	})
 }
-

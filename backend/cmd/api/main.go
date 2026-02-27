@@ -7,16 +7,17 @@ import (
 	"syscall"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cron"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/database"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/integrations"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/router"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/cache"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/cron"
+	"github.com/suprt/planica_bi/backend/internal/database"
+	"github.com/suprt/planica_bi/backend/internal/integrations"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/queue"
+	"github.com/suprt/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/router"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -25,14 +26,17 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize logger
-	log, err := logger.Init(cfg.AppEnv, cfg.LogPath)
+	log, err := logger.Init(cfg.AppDebug, cfg.LogPath, cfg.LogMaxBackups, cfg.LogMaxAge, cfg.LogMaxSize, cfg.LogCompress)
 	if err != nil {
 		panic("Failed to initialize logger: " + err.Error())
 	}
 	defer logger.Sync()
 
+	// Initialize validator
+	middleware.InitValidator()
+
 	log.Info("Application starting",
-		zap.String("env", cfg.AppEnv),
+		zap.Bool("debug", cfg.AppDebug),
 		zap.String("version", "1.0.0"),
 	)
 
@@ -133,7 +137,7 @@ func main() {
 	log.Info("Cron scheduler initialized and started")
 
 	// Setup routes (pass queueClient instead of syncService)
-	e := router.SetupRoutes(
+	router := router.SetupRoutes(
 		cfg,
 		projectService,
 		reportService,
@@ -148,6 +152,7 @@ func main() {
 		userRepo,
 		cacheClient,
 	)
+	e := router.Echo
 
 	// Setup graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -172,6 +177,11 @@ func main() {
 
 	if err := e.Shutdown(ctx); err != nil {
 		log.Error("Server forced to shutdown", zap.Error(err))
+	}
+
+	// Shutdown router (rate limiters)
+	if err := router.Shutdown(ctx); err != nil {
+		log.Error("Router shutdown failed", zap.Error(err))
 	}
 
 	// Shutdown worker

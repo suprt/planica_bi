@@ -4,19 +4,17 @@ import (
 	"context"
 	"errors"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gorm.io/gorm"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // GoalService handles business logic for goals
 type GoalService struct {
-	goalRepo    *repositories.GoalRepository
-	counterRepo *repositories.CounterRepository
+	goalRepo    GoalRepositoryInterface
+	counterRepo CounterRepositoryInterface
 }
 
 // NewGoalService creates a new goal service
-func NewGoalService(goalRepo *repositories.GoalRepository, counterRepo *repositories.CounterRepository) *GoalService {
+func NewGoalService(goalRepo GoalRepositoryInterface, counterRepo CounterRepositoryInterface) *GoalService {
 	return &GoalService{
 		goalRepo:    goalRepo,
 		counterRepo: counterRepo,
@@ -34,17 +32,14 @@ func (s *GoalService) CreateGoal(ctx context.Context, goal *models.Goal) error {
 	}
 
 	// Validate that counter exists
-	_, err := s.counterRepo.GetByID(ctx, goal.CounterID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return errors.New("counter not found")
-		}
-		return err
+	counter, err := s.counterRepo.GetByID(ctx, goal.CounterID)
+	if err != nil || counter == nil {
+		return errors.New("counter not found")
 	}
 
 	// Check if goal with this GoalID already exists for this counter
 	existing, err := s.goalRepo.GetByGoalID(ctx, goal.CounterID, goal.GoalID)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil {
 		return err
 	}
 	if existing != nil {
@@ -62,12 +57,9 @@ func (s *GoalService) GetGoal(ctx context.Context, id uint) (*models.Goal, error
 // GetGoalsByCounter retrieves all goals for a counter
 func (s *GoalService) GetGoalsByCounter(ctx context.Context, counterID uint) ([]*models.Goal, error) {
 	// Validate that counter exists
-	_, err := s.counterRepo.GetByID(ctx, counterID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New("counter not found")
-		}
-		return nil, err
+	counter, err := s.counterRepo.GetByID(ctx, counterID)
+	if err != nil || counter == nil {
+		return nil, errors.New("counter not found")
 	}
 
 	return s.goalRepo.GetByCounterID(ctx, counterID)
@@ -106,10 +98,7 @@ func (s *GoalService) UpdateGoal(ctx context.Context, goal *models.Goal) error {
 	if goal.CounterID != 0 {
 		_, err := s.counterRepo.GetByID(ctx, goal.CounterID)
 		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return errors.New("counter not found")
-			}
-			return err
+			return errors.New("counter not found")
 		}
 	}
 
@@ -126,10 +115,7 @@ func (s *GoalService) DeleteGoalsByCounter(ctx context.Context, counterID uint) 
 	// Validate that counter exists
 	_, err := s.counterRepo.GetByID(ctx, counterID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return errors.New("counter not found")
-		}
-		return err
+		return errors.New("counter not found")
 	}
 
 	return s.goalRepo.DeleteByCounterID(ctx, counterID)

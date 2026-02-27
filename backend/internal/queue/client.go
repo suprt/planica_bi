@@ -5,7 +5,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/config"
 )
 
 // Client wraps asynq client for task enqueueing

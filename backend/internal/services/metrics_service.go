@@ -4,18 +4,16 @@ import (
 	"context"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/pkg/utils"
-	"gorm.io/gorm"
+	"github.com/suprt/planica_bi/backend/pkg/utils"
 )
 
 // MetricsService handles business logic for Yandex.Metrica metrics
 type MetricsService struct {
-	metricsRepo *repositories.MetricsRepository
+	metricsRepo MetricsRepositoryInterface
 }
 
 // NewMetricsService creates a new Metrics service
-func NewMetricsService(metricsRepo *repositories.MetricsRepository) *MetricsService {
+func NewMetricsService(metricsRepo MetricsRepositoryInterface) *MetricsService {
 	return &MetricsService{
 		metricsRepo: metricsRepo,
 	}
@@ -33,7 +31,7 @@ type MetricsRow struct {
 
 // MetricsWithData represents metrics data for a project
 type MetricsWithData struct {
-	ProjectID uint        `json:"projectId"`
+	ProjectID uint         `json:"projectId"`
 	Rows      []MetricsRow `json:"rows"`
 }
 
@@ -67,7 +65,7 @@ func (s *MetricsService) GetMetricsWithData(ctx context.Context, projectID uint)
 	// Get metrics for each period
 	for _, pd := range periodData {
 		metrics, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 
@@ -85,4 +83,3 @@ func (s *MetricsService) GetMetricsWithData(ctx context.Context, projectID uint)
 
 	return result, nil
 }
-

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/logger"
 	"go.uber.org/zap"
 )
 

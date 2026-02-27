@@ -4,18 +4,16 @@ import (
 	"context"
 	"errors"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gorm.io/gorm"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // CounterService handles business logic for Yandex counters
 type CounterService struct {
-	counterRepo *repositories.CounterRepository
+	counterRepo CounterRepositoryInterface
 }
 
 // NewCounterService creates a new counter service
-func NewCounterService(counterRepo *repositories.CounterRepository) *CounterService {
+func NewCounterService(counterRepo CounterRepositoryInterface) *CounterService {
 	return &CounterService{
 		counterRepo: counterRepo,
 	}
@@ -33,7 +31,7 @@ func (s *CounterService) CreateCounter(ctx context.Context, counter *models.Yand
 
 	// Check if counter with this CounterID already exists
 	existing, err := s.counterRepo.GetByCounterID(ctx, counter.CounterID)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil {
 		return err
 	}
 	if existing != nil {

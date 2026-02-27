@@ -1,40 +1,34 @@
 package services
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/pkg/utils"
+	"github.com/suprt/planica_bi/backend/internal/ai"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/pkg/utils"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // ReportService handles business logic for reports
 type ReportService struct {
-	metricsRepo *repositories.MetricsRepository
-	directRepo  *repositories.DirectRepository
-	seoRepo     *repositories.SEORepository
-	projectRepo *repositories.ProjectRepository
+	metricsRepo MetricsRepositoryInterface
+	directRepo  DirectRepositoryInterface
+	seoRepo     SEORepositoryInterface
+	projectRepo ProjectRepositoryInterface
 	cfg         *config.Config
 }
 
 // NewReportService creates a new report service
 func NewReportService(
-	metricsRepo *repositories.MetricsRepository,
-	directRepo *repositories.DirectRepository,
-	seoRepo *repositories.SEORepository,
-	projectRepo *repositories.ProjectRepository,
+	metricsRepo MetricsRepositoryInterface,
+	directRepo DirectRepositoryInterface,
+	seoRepo SEORepositoryInterface,
+	projectRepo ProjectRepositoryInterface,
 	cfg *config.Config,
 ) *ReportService {
 	return &ReportService{
@@ -205,7 +199,7 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 	for _, pd := range periodData {
 		// Get Metrica summary
 		metrics, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 		if metrics != nil {
@@ -221,7 +215,7 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 
 		// Get age breakdown
 		ageMetrics, err := s.metricsRepo.GetAgeMetrics(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 		for _, age := range ageMetrics {
@@ -237,7 +231,7 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 
 		// Get Direct totals
 		directTotals, err := s.directRepo.GetTotalsMonthly(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 		if directTotals != nil {
@@ -255,7 +249,7 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 
 		// Get Direct campaigns and group by CampaignID
 		directCampaigns, err := s.directRepo.GetCampaignMonthly(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 		for _, campaignMonthly := range directCampaigns {
@@ -289,7 +283,7 @@ func (s *ReportService) GetReport(ctx context.Context, projectID uint) (*Report,
 
 		// Get SEO queries
 		seoQueries, err := s.seoRepo.GetSEOQueries(ctx, projectID, pd.year, pd.month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, err
 		}
 		for _, query := range seoQueries {
@@ -406,7 +400,7 @@ func (s *ReportService) GetChannelMetrics(ctx context.Context, projectID uint, p
 
 		// Get "simple" channel data (Direct totals)
 		directTotals, err := s.directRepo.GetTotalsMonthly(ctx, projectID, year, month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, fmt.Errorf("failed to get direct totals: %w", err)
 		}
 		if directTotals != nil {
@@ -438,7 +432,7 @@ func (s *ReportService) GetChannelMetrics(ctx context.Context, projectID uint, p
 
 		// Get "МК" channel data (Metrica metrics)
 		metrics, err := s.metricsRepo.GetMonthlyMetrics(ctx, projectID, year, month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, fmt.Errorf("failed to get metrica metrics: %w", err)
 		}
 		if metrics != nil {
@@ -468,7 +462,7 @@ func (s *ReportService) GetChannelMetrics(ctx context.Context, projectID uint, p
 
 		// Get "РСЯ" channel data (sum of all Direct campaigns)
 		directCampaigns, err := s.directRepo.GetCampaignMonthly(ctx, projectID, year, month)
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return nil, fmt.Errorf("failed to get direct campaigns: %w", err)
 		}
 
@@ -541,84 +535,116 @@ type MetricsAnalysisResult struct {
 	Error           string `json:"error,omitempty"`
 }
 
-// AnalyzeChannelMetrics analyzes channel metrics using Python script and OpenAI
+// AnalyzeChannelMetrics analyzes channel metrics using Go implementation and Ollama
 func (s *ReportService) AnalyzeChannelMetrics(ctx context.Context, metricsData *ChannelMetricsOutput) (*MetricsAnalysisResult, error) {
-	// Convert metrics data to JSON
-	jsonData, err := json.Marshal(metricsData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal metrics data: %w", err)
+	result := &MetricsAnalysisResult{
+		AnalyticalFacts: "",
+		AIReport:        "",
+		Error:           "",
 	}
 
-	// Find Python script path
-	// Try multiple possible locations
-	possiblePaths := []string{
-		filepath.Join("scripts", "analyze_metrics.py"),
-		filepath.Join("backend", "scripts", "analyze_metrics.py"),
-		filepath.Join("/root", "scripts", "analyze_metrics.py"), // Docker container path
-		"./scripts/analyze_metrics.py",
+	// Collect analytical facts from metrics
+	insights := s.analyzeChannelMetrics(metricsData)
+	baseText := strings.Join(insights, "\n")
+	if baseText == "" {
+		baseText = "Изменения метрик незначительны."
 	}
+	result.AnalyticalFacts = baseText
 
-	var scriptPath string
-	var found bool
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			scriptPath = path
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return nil, fmt.Errorf("python script not found. Tried: %v", possiblePaths)
-	}
-
-	// Create context with timeout for script execution (120 seconds)
-	scriptCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
-	defer cancel()
-
-	// Create command to run Python script
-	cmd := exec.CommandContext(scriptCtx, "python3", scriptPath)
-	// If python3 is not available, try python
-	if _, err := exec.LookPath("python3"); err != nil {
-		cmd = exec.CommandContext(scriptCtx, "python", scriptPath)
-	}
-
-	// Set environment variables for Ollama API
-	cmd.Env = os.Environ()
+	// If Ollama API key is configured, generate AI report
 	if s.cfg.OllamaAPIKey != "" {
-		cmd.Env = append(cmd.Env, "OLLAMA_API_KEY="+s.cfg.OllamaAPIKey)
-	}
-	if s.cfg.OllamaAPIURL != "" {
-		cmd.Env = append(cmd.Env, "OLLAMA_API_URL="+s.cfg.OllamaAPIURL)
-	}
-	if s.cfg.OllamaModel != "" {
-		cmd.Env = append(cmd.Env, "OLLAMA_MODEL="+s.cfg.OllamaModel)
-	}
+		ollamaClient := ai.NewOllamaClient(
+			s.cfg.OllamaAPIKey,
+			s.cfg.OllamaAPIURL,
+			s.cfg.OllamaModel,
+		)
 
-	// Set stdin to JSON data
-	cmd.Stdin = bytes.NewReader(jsonData)
+		prompt := fmt.Sprintf(`Ты опытный маркетинг‑аналитик. На основе предоставленных аналитических фактов сделай краткие выводы и рекомендации.
 
-	// Capture stdout and stderr
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+Аналитические факты:
 
-	// Run the script
-	if err := cmd.Run(); err != nil {
-		if logger.Log != nil {
-			logger.Log.Error("Failed to run Python analysis script",
-				zap.Error(err),
-				zap.String("stderr", stderr.String()),
-			)
+%s
+
+Требования:
+- Напиши максимум один абзац кратких выводов по результатам
+- НЕ перечисляй конкретные цифры и проценты (пользователь их уже видит)
+- Сделай выводы о трендах, проблемах и возможностях
+- Дай 3-5 конкретных рекомендаций в виде списка
+- Будь лаконичным и по делу
+
+Формат: Один абзац выводов, затем список из 3-5 рекомендаций.`, baseText)
+
+		aiReport, err := ollamaClient.Generate(ctx, prompt)
+		if err != nil {
+			result.Error = fmt.Sprintf("Ollama API error: %v", err)
+			if logger.Log != nil {
+				logger.Log.Warn("Failed to generate AI report",
+					zap.Error(err),
+				)
+			}
+		} else {
+			result.AIReport = aiReport
 		}
-		return nil, fmt.Errorf("python script execution failed: %w (stderr: %s)", err, stderr.String())
+	} else {
+		result.Error = "OLLAMA_API_KEY not set"
 	}
 
-	// Parse JSON output
-	var result MetricsAnalysisResult
-	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse Python script output: %w (output: %s)", err, stdout.String())
+	return result, nil
+}
+
+// analyzeChannelMetrics analyzes metrics for each channel and returns insights
+func (s *ReportService) analyzeChannelMetrics(data *ChannelMetricsOutput) []string {
+	var insights []string
+
+	for name, ch := range data.Metrics {
+		channelInsights := s.analyzeChannel(name, ch)
+		insights = append(insights, channelInsights...)
 	}
 
-	return &result, nil
+	return insights
+}
+
+// analyzeChannel analyzes metrics for a single channel
+func (s *ReportService) analyzeChannel(name string, ch *ChannelMetrics) []string {
+	var insights []string
+
+	// Check that we have at least 2 periods for comparison
+	if len(ch.CPC) < 2 || len(ch.CTR) < 2 || len(ch.CPA) < 2 || len(ch.Conversions) < 2 {
+		return insights
+	}
+
+	// Calculate dynamics (comparing current period [0] with previous period [1])
+	// Periods are ordered from newest to oldest: [current, previous, oldest]
+	var dctr, dcpa, dconv float64
+
+	if ch.CTR[1] != 0 {
+		dctr = ((ch.CTR[0] - ch.CTR[1]) / ch.CTR[1]) * 100
+	}
+	if ch.CPA[1] != 0 {
+		dcpa = ((ch.CPA[0] - ch.CPA[1]) / ch.CPA[1]) * 100
+	}
+	if ch.Conversions[1] != 0 {
+		dconv = ((float64(ch.Conversions[0]) - float64(ch.Conversions[1])) / float64(ch.Conversions[1])) * 100
+	}
+
+	// Generate insights based on dynamics
+	if dctr > 5 {
+		insights = append(insights, fmt.Sprintf("CTR %s вырос на %.1f%% — объявления стали привлекательнее.", name, dctr))
+	} else if dctr < -5 {
+		insights = append(insights, fmt.Sprintf("CTR %s снизился на %.1f%% — стоит обновить креативы.", name, -dctr))
+	}
+
+	if dcpa > 5 {
+		insights = append(insights, fmt.Sprintf("CPA %s вырос на %.1f%% — реклама дорожает.", name, dcpa))
+	} else if dcpa < -5 {
+		insights = append(insights, fmt.Sprintf("CPA %s снизился на %.1f%% — улучшилась эффективность.", name, -dcpa))
+	}
+
+	if dconv > 5 {
+		insights = append(insights, fmt.Sprintf("Конверсии %s выросли на %.1f%%.", name, dconv))
+	} else if dconv < -5 {
+		insights = append(insights, fmt.Sprintf("Конверсии %s снизились на %.1f%% — требуется оптимизация.", name, -dconv))
+	}
+
+	return insights
 }

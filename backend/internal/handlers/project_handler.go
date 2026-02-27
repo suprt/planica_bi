@@ -6,9 +6,10 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +18,7 @@ type ProjectServiceInterface interface {
 	CreateProject(ctx context.Context, project *models.Project) error
 	GetProject(ctx context.Context, id uint) (*models.Project, error)
 	GetAllProjects(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error)
+	GetAllProjectsPaginated(ctx context.Context, userID uint, isAdmin bool, pagination *middleware.Pagination) ([]*models.Project, int64, error)
 	UpdateProject(ctx context.Context, project *models.Project) error
 	DeleteProject(ctx context.Context, id uint) error
 	GetProjectByPublicToken(ctx context.Context, token string) (*models.Project, error)
@@ -25,11 +27,11 @@ type ProjectServiceInterface interface {
 // ProjectHandler handles HTTP requests for projects
 type ProjectHandler struct {
 	projectService ProjectServiceInterface
-	userRepo       repositories.UserRepositoryInterface
+	userRepo       services.UserRepositoryInterface
 }
 
 // NewProjectHandler creates a new project handler
-func NewProjectHandler(projectService ProjectServiceInterface, userRepo repositories.UserRepositoryInterface) *ProjectHandler {
+func NewProjectHandler(projectService ProjectServiceInterface, userRepo services.UserRepositoryInterface) *ProjectHandler {
 	return &ProjectHandler{
 		projectService: projectService,
 		userRepo:       userRepo,
@@ -116,11 +118,11 @@ func (h *ProjectHandler) GetPublicLink(c echo.Context) error {
 	if host == "" {
 		host = "localhost:8080"
 	}
-	
+
 	publicURL := fmt.Sprintf("%s://%s/api/public/report/%s", protocol, host, project.PublicToken)
 
 	return c.JSON(200, map[string]interface{}{
-		"public_url":  publicURL,
+		"public_url":   publicURL,
 		"public_token": project.PublicToken,
 		"project_id":   project.ID,
 		"project_name": project.Name,
@@ -144,17 +146,20 @@ func (h *ProjectHandler) GetAllProjects(c echo.Context) error {
 		isAdmin = false
 	}
 
-	projects, err := h.projectService.GetAllProjects(ctx, userID, isAdmin)
+	// Get pagination parameters
+	pagination := middleware.GetPagination(c)
+
+	// Get paginated projects
+	projects, total, err := h.projectService.GetAllProjectsPaginated(ctx, userID, isAdmin, pagination)
 	if err != nil {
 		return err
 	}
 
-	// Check if request is from react-admin (has Accept header or specific query param)
-	// For now, return both formats - frontend will handle it
 	// React-admin expects { data: [...], total: N }
-	// Regular API expects [...]
-	// We'll return the array format for compatibility, frontend will handle both
-	return c.JSON(200, projects)
+	return c.JSON(200, map[string]interface{}{
+		"data":  projects,
+		"total": total,
+	})
 }
 
 // UpdateProject handles PUT /api/projects/:id

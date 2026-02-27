@@ -7,17 +7,17 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // UserService handles business logic for user management
 type UserService struct {
-	userRepo repositories.UserRepositoryInterface
+	userRepo UserRepositoryInterface
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo repositories.UserRepositoryInterface) *UserService {
+func NewUserService(userRepo UserRepositoryInterface) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
@@ -25,17 +25,17 @@ func NewUserService(userRepo repositories.UserRepositoryInterface) *UserService 
 
 // CreateUserRequest represents request to create a user
 type CreateUserRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name     string `json:"name" validate:"required,min=2,max=50"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
 	IsActive bool   `json:"is_active"`
 }
 
 // UpdateUserRequest represents request to update a user
 type UpdateUserRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Email    *string `json:"email,omitempty"`
-	Password *string `json:"password,omitempty"`
+	Name     *string `json:"name,omitempty" validate:"omitempty,min=2,max=50"`
+	Email    *string `json:"email,omitempty" validate:"omitempty,email"`
+	Password *string `json:"password,omitempty" validate:"omitempty,min=8"`
 	IsActive *bool   `json:"is_active,omitempty"`
 }
 
@@ -57,9 +57,9 @@ type UserProjectResponse struct {
 
 // AssignRoleRequest represents request to assign role to user
 type AssignRoleRequest struct {
-	UserID    uint   `json:"user_id"`
-	ProjectID uint   `json:"project_id"`
-	Role      string `json:"role"`
+	UserID    uint   `json:"user_id" validate:"required"`
+	ProjectID uint   `json:"project_id" validate:"required"`
+	Role      string `json:"role" validate:"required,oneof=admin manager client"`
 }
 
 // GetAllUsers retrieves all users with their project roles
@@ -97,6 +97,42 @@ func (s *UserService) GetAllUsers(ctx context.Context) ([]UserResponse, error) {
 	}
 
 	return response, nil
+}
+
+// GetAllUsersPaginated retrieves paginated users with their project roles
+func (s *UserService) GetAllUsersPaginated(ctx context.Context, pagination *middleware.Pagination) ([]UserResponse, int64, error) {
+	users, total, err := s.userRepo.GetAllPaginated(ctx, pagination)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	response := make([]UserResponse, len(users))
+	for i, user := range users {
+		// Get user projects
+		projectRoles, err := s.userRepo.GetUserProjects(ctx, user.ID)
+		if err != nil {
+			projectRoles = []models.UserProjectRole{}
+		}
+
+		projects := make([]UserProjectResponse, len(projectRoles))
+		for j, pr := range projectRoles {
+			projects[j] = UserProjectResponse{
+				ProjectID:   pr.ProjectID,
+				ProjectName: pr.Project.Name,
+				Role:        pr.Role,
+			}
+		}
+
+		response[i] = UserResponse{
+			ID:       user.ID,
+			Name:     user.Name,
+			Email:    user.Email,
+			IsActive: user.IsActive,
+			Projects: projects,
+		}
+	}
+
+	return response, total, err
 }
 
 // GetUserByID retrieves user by ID with their projects
@@ -182,7 +218,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 func (s *UserService) UpdateUser(ctx context.Context, userID uint, req *UpdateUserRequest) (*UserResponse, error) {
 	// Get existing user
 	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -237,8 +273,8 @@ func (s *UserService) UpdateUser(ctx context.Context, userID uint, req *UpdateUs
 // DeleteUser deletes a user
 func (s *UserService) DeleteUser(ctx context.Context, userID uint) error {
 	// Check if user exists
-	_, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil || user == nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -284,8 +320,8 @@ func (s *UserService) AssignRole(ctx context.Context, req *AssignRoleRequest) er
 	}
 
 	// Check if user exists
-	_, err := s.userRepo.GetByID(ctx, req.UserID)
-	if err != nil {
+	user, err := s.userRepo.GetByID(ctx, req.UserID)
+	if err != nil || user == nil {
 		return fmt.Errorf("user not found: %w", err)
 	}
 

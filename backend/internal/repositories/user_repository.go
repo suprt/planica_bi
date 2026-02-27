@@ -3,7 +3,8 @@ package repositories
 import (
 	"context"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -108,6 +109,27 @@ func (r *UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
+// GetAllPaginated retrieves paginated users
+func (r *UserRepository) GetAllPaginated(ctx context.Context, pagination *middleware.Pagination) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	// Count total
+	if err := r.db.WithContext(ctx).Model(&models.User{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	err := r.db.WithContext(ctx).
+		Preload("ProjectRoles").
+		Order(pagination.Sort + " " + pagination.Order).
+		Limit(pagination.PerPage).
+		Offset(pagination.Offset).
+		Find(&users).Error
+
+	return users, total, err
+}
+
 // Update updates user information
 func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
@@ -168,4 +190,3 @@ func (r *UserRepository) RemoveRole(ctx context.Context, userID, projectID uint)
 		Where("user_id = ? AND project_id = ?", userID, projectID).
 		Delete(&models.UserProjectRole{}).Error
 }
-

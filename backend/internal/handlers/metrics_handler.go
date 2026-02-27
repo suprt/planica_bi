@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/services"
 )
 
 // MetricsServiceInterface defines methods for Metrics operations
@@ -42,4 +42,3 @@ func (h *MetricsHandler) GetMetrics(c echo.Context) error {
 
 	return c.JSON(200, metrics)
 }
-

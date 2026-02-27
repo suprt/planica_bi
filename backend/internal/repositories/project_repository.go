@@ -3,7 +3,8 @@ package repositories
 import (
 	"context"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -39,6 +40,26 @@ func (r *ProjectRepository) GetAll(ctx context.Context) ([]*models.Project, erro
 	return projects, err
 }
 
+// GetAllPaginated retrieves paginated projects
+func (r *ProjectRepository) GetAllPaginated(ctx context.Context, pagination *middleware.Pagination) ([]*models.Project, int64, error) {
+	var projects []*models.Project
+	var total int64
+
+	// Count total
+	if err := r.db.WithContext(ctx).Model(&models.Project{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	err := r.db.WithContext(ctx).
+		Order(pagination.Sort + " " + pagination.Order).
+		Limit(pagination.PerPage).
+		Offset(pagination.Offset).
+		Find(&projects).Error
+
+	return projects, total, err
+}
+
 // GetByUserID retrieves all projects for a specific user
 // Admin gets all projects, others get only projects they have access to
 func (r *ProjectRepository) GetByUserID(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error) {
@@ -57,6 +78,39 @@ func (r *ProjectRepository) GetByUserID(ctx context.Context, userID uint, isAdmi
 		Find(&projects).Error
 
 	return projects, err
+}
+
+// GetByUserIDPaginated retrieves paginated projects for a specific user
+func (r *ProjectRepository) GetByUserIDPaginated(ctx context.Context, userID uint, isAdmin bool, pagination *middleware.Pagination) ([]*models.Project, int64, error) {
+	var projects []*models.Project
+	var total int64
+
+	if isAdmin {
+		// Admin sees all projects - use GetAllPaginated
+		return r.GetAllPaginated(ctx, pagination)
+	}
+
+	// Count total
+	if err := r.db.WithContext(ctx).
+		Table("projects").
+		Joins("INNER JOIN user_project_roles ON projects.id = user_project_roles.project_id").
+		Where("user_project_roles.user_id = ?", userID).
+		Model(&models.Project{}).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	err := r.db.WithContext(ctx).
+		Table("projects").
+		Joins("INNER JOIN user_project_roles ON projects.id = user_project_roles.project_id").
+		Where("user_project_roles.user_id = ?", userID).
+		Order(pagination.Sort + " " + pagination.Order).
+		Limit(pagination.PerPage).
+		Offset(pagination.Offset).
+		Find(&projects).Error
+
+	return projects, total, err
 }
 
 // Update updates a project

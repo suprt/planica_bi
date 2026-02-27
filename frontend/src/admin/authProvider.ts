@@ -6,7 +6,7 @@ export const authProvider: AuthProvider = {
         try {
             await authService.login({ email: username, password });
             
-            // authService уже сохраняет токен в localStorage
+            // authService уже сохраняет токен в sessionStorage
             // Проверяем, что пользователь - админ
             const user = authService.getUser();
             if (!user) {

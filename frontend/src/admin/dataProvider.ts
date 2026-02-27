@@ -1,8 +1,8 @@
 import { DataProvider, fetchUtils } from 'react-admin';
 
 const httpClient = (url: string, options: any = {}) => {
-    // Добавляем JWT токен из localStorage
-    const token = localStorage.getItem('auth_token');
+    // Добавляем JWT токен из sessionStorage
+    const token = sessionStorage.getItem('auth_token');
     
     if (!options.headers) {
         options.headers = new Headers();

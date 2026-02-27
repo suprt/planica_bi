@@ -13,9 +13,9 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	AppEnv      string
-	AppKey      string
-	AppURL      string // Backend URL
+	AppDebug bool   // Enable debug mode (verbose logging)
+	AppKey   string
+	AppURL   string // Backend URL
 	FrontendURL string // Frontend URL for OAuth redirects
 
 	DBHost     string
@@ -44,8 +44,12 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
-	LogLevel string
-	LogPath  string // Path to log file (default: storage/logs/app.log)
+	LogLevel  string
+	LogPath   string // Path to log file (default: storage/logs/app.log)
+	LogMaxSize    int  // Maximum size in MB before rotation (default: 100)
+	LogMaxBackups int  // Maximum number of old log files to retain (default: 3)
+	LogMaxAge     int  // Maximum days to retain old log files (default: 28)
+	LogCompress   bool // Enable compression of rotated log files (default: true)
 }
 
 // Load loads configuration from environment variables
@@ -55,7 +59,7 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		AppEnv:      getEnv("APP_ENV", "development"),
+		AppDebug:    getEnv("APP_DEBUG", "true") == "true", // Enable debug logging by default
 		AppKey:      getEnv("APP_KEY", ""),
 		AppURL:      getEnv("APP_URL", "http://localhost:8080"),
 		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"), // Default frontend port
@@ -87,7 +91,11 @@ func Load() *Config {
 
 		// Default log path: use absolute path from working directory
 		// In Docker container, working dir is /root/, so this becomes /root/storage/logs/app.log
-		LogPath: getEnv("LOG_PATH", "/root/storage/logs/app.log"),
+		LogPath:       getEnv("LOG_PATH", "/root/storage/logs/app.log"),
+		LogMaxSize:    getEnvInt("LOG_MAX_SIZE", 100),    // 100 MB
+		LogMaxBackups: getEnvInt("LOG_MAX_BACKUPS", 3),   // 3 files
+		LogMaxAge:     getEnvInt("LOG_MAX_AGE", 28),      // 28 days
+		LogCompress:   getEnv("LOG_COMPRESS", "true") == "true",
 	}
 }
 

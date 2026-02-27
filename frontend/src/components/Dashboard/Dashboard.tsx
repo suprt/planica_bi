@@ -188,7 +188,7 @@ const Dashboard: React.FC = () => {
         console.log('[Dashboard] User logout initiated');
         setUserMenuOpen(false);
         
-        // Вызываем logout из AuthContext (удаляет токен из localStorage)
+        // Вызываем logout из AuthContext (удаляет токен из sessionStorage)
         logout();
         
         // Редиректим на страницу логина

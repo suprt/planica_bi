@@ -25,12 +25,12 @@ const apiClient = axios.create({
 /**
  * Request Interceptor
  * Вызывается перед каждым запросом
- * Добавляет JWT токен из localStorage в Authorization header
+ * Добавляет JWT токен из sessionStorage в Authorization header
  */
 apiClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        // Получаем токен из localStorage
-        const token = localStorage.getItem('auth_token');
+        // Получаем токен из sessionStorage
+        const token = sessionStorage.getItem('auth_token');
         
         // Если токен есть, добавляем его в headers
         if (token && config.headers) {
@@ -79,9 +79,10 @@ apiClient.interceptors.response.use(
             // 401 Unauthorized - токен истек или невалиден
             if (status === 401) {
                 console.warn('[API] Unauthorized - redirecting to login');
-                
+
                 // Удаляем невалидный токен
-                localStorage.removeItem('auth_token');
+                sessionStorage.removeItem('auth_token');
+                sessionStorage.removeItem('auth_user');
                 
                 // Редиректим на страницу логина (только если не на странице логина)
                 if (window.location.pathname !== '/login') {

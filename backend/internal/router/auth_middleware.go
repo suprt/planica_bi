@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/services"
 )
 
 // Context key types to avoid collisions
@@ -67,7 +67,7 @@ func AuthMiddleware(authService interface {
 // RequireProjectRole middleware checks if user has required role on project
 // For routes without :id parameter, it only checks if user is admin
 // For routes with :id parameter, it checks project-specific access
-func RequireProjectRole(userRepo repositories.UserRepositoryInterface, allowedRoles ...string) echo.MiddlewareFunc {
+func RequireProjectRole(userRepo services.UserRepositoryInterface, allowedRoles ...string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get user ID from context (set by AuthMiddleware)

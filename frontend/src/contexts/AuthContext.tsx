@@ -75,12 +75,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     return;
                 }
 
-                // Восстанавливаем данные пользователя из localStorage
+                // Восстанавливаем данные пользователя из sessionStorage
                 const savedUser = authService.getUser();
-                
+
                 if (savedUser) {
                     setUser(savedUser);
-                    console.log('[AuthContext] User authenticated from localStorage:', savedUser.email);
+                    console.log('[AuthContext] User authenticated from sessionStorage:', savedUser.email);
                 } else {
                     // Если данных пользователя нет, удаляем токен (некорректное состояние)
                     console.log('[AuthContext] User data not found, removing token');

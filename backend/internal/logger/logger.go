@@ -7,19 +7,24 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var Log *zap.Logger
 
-// Init initializes the logger based on environment
-// If logPath is provided, logs will be written to file (append mode), otherwise to stdout
-func Init(env, logPath string) (*zap.Logger, error) {
+// Init initializes the logger based on debug mode
+// If isDebug is true: verbose logging with colors (for development)
+// If isDebug is false: JSON structured logging, INFO level only (for production)
+// If logPath is provided, logs will be written to file with rotation (append mode), otherwise to stdout
+func Init(isDebug bool, logPath string, maxBackups int, maxAge int, maxSize int, compress bool) (*zap.Logger, error) {
 	var config zap.Config
 
-	if env == "production" {
+	if !isDebug {
+		// Production mode: JSON format, INFO level only
 		config = zap.NewProductionConfig()
 		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	} else {
+		// Development mode: console format with colors, DEBUG level
 		config = zap.NewDevelopmentConfig()
 		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
@@ -28,7 +33,7 @@ func Init(env, logPath string) (*zap.Logger, error) {
 	config.EncoderConfig.TimeKey = "timestamp"
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	// If logPath is provided, write to file
+	// If logPath is provided, write to file with lumberjack rotation
 	if logPath != "" {
 		// Resolve path to absolute to avoid issues with relative paths
 		absLogPath, err := filepath.Abs(logPath)
@@ -42,24 +47,26 @@ func Init(env, logPath string) (*zap.Logger, error) {
 			return nil, fmt.Errorf("failed to create log directory: %w", err)
 		}
 
-		// Open file in append mode (O_APPEND) to prevent overwriting on restart
-		// If file doesn't exist, it will be created
-		logFile, err := os.OpenFile(absLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			return nil, err
+		// Use lumberjack for log rotation
+		lumberjackLogger := &lumberjack.Logger{
+			Filename:   absLogPath,
+			MaxSize:    maxSize,    // megabytes
+			MaxBackups: maxBackups, // number of old files to keep
+			MaxAge:     maxAge,     // days
+			Compress:   compress,   // gzip compression
 		}
 
 		// Create file writer core
 		fileEncoder := config.EncoderConfig
 		fileCore := zapcore.NewCore(
 			zapcore.NewJSONEncoder(fileEncoder),
-			zapcore.AddSync(logFile),
+			zapcore.AddSync(lumberjackLogger),
 			config.Level,
 		)
 
 		// Create stdout writer core
 		stdoutEncoder := config.EncoderConfig
-		if env != "production" {
+		if isDebug {
 			stdoutEncoder.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		}
 		stdoutCore := zapcore.NewCore(

@@ -6,8 +6,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -64,27 +65,24 @@ func (h *ProjectUserHandler) AssignUserRole(c echo.Context) error {
 		})
 	}
 
-	var req struct {
-		UserID uint   `json:"user_id"`
-		Role   string `json:"role"`
-	}
-
+	var req services.AssignRoleRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid request body",
 		})
 	}
 
-	assignReq := &services.AssignRoleRequest{
-		UserID:    req.UserID,
-		ProjectID: uint(projectID),
-		Role:      req.Role,
+	req.ProjectID = uint(projectID)
+
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
 	}
 
-	if err := h.userService.AssignRole(ctx, assignReq); err != nil {
+	if err := h.userService.AssignRole(ctx, &req); err != nil {
 		logger.Log.Error("Failed to assign role",
 			zap.Error(err),
-			zap.Uint64("project_id", projectID),
+			zap.Uint64("project_id", uint64(req.ProjectID)),
 			zap.Uint("user_id", req.UserID),
 			zap.String("role", req.Role),
 		)
@@ -94,7 +92,7 @@ func (h *ProjectUserHandler) AssignUserRole(c echo.Context) error {
 	}
 
 	logger.Log.Info("Role assigned",
-		zap.Uint64("project_id", projectID),
+		zap.Uint64("project_id", uint64(req.ProjectID)),
 		zap.Uint("user_id", req.UserID),
 		zap.String("role", req.Role),
 	)
@@ -131,7 +129,7 @@ func (h *ProjectUserHandler) UpdateUserRole(c echo.Context) error {
 	}
 
 	var req struct {
-		Role string `json:"role"`
+		Role string `json:"role" validate:"required,oneof=admin manager client"`
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -140,10 +138,15 @@ func (h *ProjectUserHandler) UpdateUserRole(c echo.Context) error {
 		})
 	}
 
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
+	}
+
 	if err := h.userService.UpdateRole(ctx, uint(userID), uint(projectID), req.Role); err != nil {
 		logger.Log.Error("Failed to update role",
 			zap.Error(err),
-			zap.Uint64("project_id", projectID),
+			zap.Uint64("project_id", uint64(projectID)),
 			zap.Uint64("user_id", userID),
 			zap.String("role", req.Role),
 		)
@@ -213,4 +216,3 @@ func (h *ProjectUserHandler) RemoveUserRole(c echo.Context) error {
 		},
 	})
 }
-

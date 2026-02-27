@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/models"
 	"gorm.io/gorm"
 )
 

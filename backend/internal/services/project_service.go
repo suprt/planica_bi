@@ -7,17 +7,17 @@ import (
 	"errors"
 	"fmt"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // ProjectService handles business logic for projects
 type ProjectService struct {
-	projectRepo *repositories.ProjectRepository
+	projectRepo ProjectRepositoryInterface
 }
 
 // NewProjectService creates a new project service
-func NewProjectService(projectRepo *repositories.ProjectRepository) *ProjectService {
+func NewProjectService(projectRepo ProjectRepositoryInterface) *ProjectService {
 	return &ProjectService{
 		projectRepo: projectRepo,
 	}
@@ -63,6 +63,11 @@ func (s *ProjectService) GetProject(ctx context.Context, id uint) (*models.Proje
 // Admin gets all projects, others get only projects they have access to
 func (s *ProjectService) GetAllProjects(ctx context.Context, userID uint, isAdmin bool) ([]*models.Project, error) {
 	return s.projectRepo.GetByUserID(ctx, userID, isAdmin)
+}
+
+// GetAllProjectsPaginated retrieves paginated projects for a user
+func (s *ProjectService) GetAllProjectsPaginated(ctx context.Context, userID uint, isAdmin bool, pagination *middleware.Pagination) ([]*models.Project, int64, error) {
+	return s.projectRepo.GetByUserIDPaginated(ctx, userID, isAdmin, pagination)
 }
 
 // GetAllActiveProjects retrieves all active projects (for system tasks like cron)

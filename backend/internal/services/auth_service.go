@@ -9,19 +9,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // AuthService handles authentication and authorization
 type AuthService struct {
-	userRepo  repositories.UserRepositoryInterface
+	userRepo  UserRepositoryInterface
 	jwtSecret []byte
 	jwtExpiry time.Duration
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(userRepo repositories.UserRepositoryInterface, jwtSecret string, jwtExpiry time.Duration) *AuthService {
+func NewAuthService(userRepo UserRepositoryInterface, jwtSecret string, jwtExpiry time.Duration) *AuthService {
 	return &AuthService{
 		userRepo:  userRepo,
 		jwtSecret: []byte(jwtSecret),
@@ -31,15 +30,15 @@ func NewAuthService(userRepo repositories.UserRepositoryInterface, jwtSecret str
 
 // RegisterRequest represents registration request
 type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name     string `json:"name" validate:"required,min=2,max=50"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
 }
 
 // LoginRequest represents login request
 type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 // AuthResponse represents authentication response
@@ -125,7 +124,7 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*AuthRespon
 
 	// Get user by email
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, errors.New("invalid email or password")
 	}
 

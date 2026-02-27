@@ -196,8 +196,4 @@ docker-compose restart backend
 
 - Логи приложения: `backend/storage/logs/app.log`
 - База данных инициализируется автоматически при первом запуске
-<<<<<<< HEAD
 - Тестовые данные загружаются из `backend/database/init/`
-=======
-- Тестовые данные загружаются из `backend/database/init/`
->>>>>>> 14842a09ba46957b3c3f493f465c1890f2f417c5

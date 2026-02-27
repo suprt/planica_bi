@@ -4,7 +4,8 @@ import (
 	"context"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/services"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/services"
 )
 
 // AuthServiceInterface defines methods for authentication operations
@@ -35,6 +36,11 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return echo.NewHTTPError(400, "Invalid request body")
 	}
 
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
+	}
+
 	response, err := h.authService.Register(ctx, &req)
 	if err != nil {
 		// Check for validation errors
@@ -60,6 +66,11 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return echo.NewHTTPError(400, "Invalid request body")
 	}
 
+	// Validate request
+	if err := middleware.ValidateRequest(c, &req); err != nil {
+		return err
+	}
+
 	response, err := h.authService.Login(ctx, &req)
 	if err != nil {
 		// Check for validation errors
@@ -74,4 +85,3 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	return c.JSON(200, response)
 }
-

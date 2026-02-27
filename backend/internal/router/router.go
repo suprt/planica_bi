@@ -1,17 +1,26 @@
 package router
 
 import (
+	"context"
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/handlers"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/queue"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
+	"github.com/suprt/planica_bi/backend/internal/cache"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	"github.com/suprt/planica_bi/backend/internal/handlers"
+	"github.com/suprt/planica_bi/backend/internal/middleware"
+	"github.com/suprt/planica_bi/backend/internal/queue"
+	"github.com/suprt/planica_bi/backend/internal/services"
 )
+
+// Router holds the Echo instance and middleware
+type Router struct {
+	Echo        *echo.Echo
+	rateLimiter *middleware.RateLimiter
+	authLimiter *middleware.RateLimiter
+}
 
 // SetupRoutes configures all API routes using Echo
 // Services are passed as parameters to handlers
@@ -27,14 +36,27 @@ func SetupRoutes(
 	marketingService handlers.MarketingServiceInterface,
 	authService handlers.AuthServiceInterface,
 	userService handlers.UserServiceInterface,
-	userRepo repositories.UserRepositoryInterface,
+	userRepo services.UserRepositoryInterface,
 	cacheClient *cache.Cache,
-) *echo.Echo {
-	e := echo.New()
+) *Router {
+	router := &Router{
+		Echo: echo.New(),
+	}
+	e := router.Echo
 
 	// Middleware
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	e.Use(echoMiddleware.Recover())
+
+	// CORS with configuration
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins: []string{cfg.FrontendURL},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.PATCH},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
+
+	// Rate limiting - general limiter for all routes
+	router.rateLimiter = middleware.NewRateLimiter(middleware.DefaultRateLimiterConfig())
+	e.Use(router.rateLimiter.Middleware())
 
 	// UTF-8 encoding middleware for responses
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -67,14 +89,22 @@ func SetupRoutes(
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userService)
 	projectUserHandler := handlers.NewProjectUserHandler(userService)
+	healthHandler := handlers.NewHealthHandler()
+
+	// Health check routes (public, no authentication required)
+	e.GET("/health", healthHandler.Health)
+	e.GET("/ready", healthHandler.Ready)
 
 	// API group
 	api := e.Group("/api")
 
+	// Strict rate limiter for auth endpoints (prevent brute force)
+	router.authLimiter = middleware.NewRateLimiter(middleware.StrictRateLimiterConfig())
+
 	// Public routes (no authentication required)
-	// Auth routes
-	api.POST("/auth/register", authHandler.Register)
-	api.POST("/auth/login", authHandler.Login)
+	// Auth routes with strict rate limiting
+	api.POST("/auth/register", authHandler.Register, router.authLimiter.Middleware())
+	api.POST("/auth/login", authHandler.Login, router.authLimiter.Middleware())
 
 	// OAuth routes (public, but may require auth later)
 	api.GET("/oauth/yandex", oauthHandler.InitiateAuth)
@@ -139,5 +169,16 @@ func SetupRoutes(
 	adminOnly.PUT("/projects/:id/users/:userId", projectUserHandler.UpdateUserRole)
 	adminOnly.DELETE("/projects/:id/users/:userId", projectUserHandler.RemoveUserRole)
 
-	return e
+	return router
+}
+
+// Shutdown stops all background processes and cleanup resources
+func (r *Router) Shutdown(ctx context.Context) error {
+	if r.rateLimiter != nil {
+		r.rateLimiter.Stop()
+	}
+	if r.authLimiter != nil {
+		r.authLimiter.Stop()
+	}
+	return nil
 }

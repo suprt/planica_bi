@@ -5,10 +5,11 @@ services:
     env_file:
       - backend/.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-1234}
-      MYSQL_DATABASE: ${DB_DATABASE:-reports}
-      MYSQL_USER: ${DB_USERNAME:-reports}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-1234}
+      # WARNING: Change these in production!
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
@@ -52,6 +53,12 @@ services:
     networks:
       - planica_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:7-alpine

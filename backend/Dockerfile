@@ -16,17 +16,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
 # Final stage
 FROM alpine:latest
 
-# Install Python and pip
-RUN apk --no-cache add ca-certificates tzdata python3 py3-pip
+# Install only necessary packages (no Python needed)
+RUN apk --no-cache add ca-certificates tzdata wget
 
 WORKDIR /root/
 
 # Copy the binary from builder
 COPY --from=builder /app/main .
-
-# Copy Python scripts and install dependencies
-COPY scripts/ ./scripts/
-RUN if [ -f scripts/requirements.txt ]; then pip3 install --break-system-packages --no-cache-dir -r scripts/requirements.txt; fi
 
 # Expose port
 EXPOSE 8080

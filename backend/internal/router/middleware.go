@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/logger"
 )
 
 // timeoutMiddleware sets a timeout for request context

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/cache"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/cache"
+	"github.com/suprt/planica_bi/backend/internal/models"
 	"gorm.io/gorm"
 )
 

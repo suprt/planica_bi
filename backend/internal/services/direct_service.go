@@ -5,19 +5,17 @@ import (
 	"errors"
 	"time"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/repositories"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/pkg/utils"
-	"gorm.io/gorm"
+	"github.com/suprt/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/pkg/utils"
 )
 
 // DirectService handles business logic for Yandex.Direct accounts
 type DirectService struct {
-	directRepo *repositories.DirectRepository
+	directRepo DirectRepositoryInterface
 }
 
 // NewDirectService creates a new Direct service
-func NewDirectService(directRepo *repositories.DirectRepository) *DirectService {
+func NewDirectService(directRepo DirectRepositoryInterface) *DirectService {
 	return &DirectService{
 		directRepo: directRepo,
 	}
@@ -35,7 +33,7 @@ func (s *DirectService) CreateAccount(ctx context.Context, account *models.Direc
 
 	// Check if account with this ClientLogin already exists for this project
 	existing, err := s.directRepo.GetAccountByClientLogin(ctx, account.ProjectID, account.ClientLogin)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil {
 		return err
 	}
 	if existing != nil {
@@ -64,9 +62,9 @@ type CampaignMetricsRow struct {
 
 // CampaignWithMetrics represents a campaign with its metrics
 type CampaignWithMetrics struct {
-	CampaignID int64               `json:"campaignId"`
-	Name       string              `json:"name"`
-	Status     string              `json:"status"`
+	CampaignID int64                `json:"campaignId"`
+	Name       string               `json:"name"`
+	Status     string               `json:"status"`
 	Rows       []CampaignMetricsRow `json:"rows"`
 }
 
@@ -116,7 +114,7 @@ func (s *DirectService) GetCampaignsWithMetrics(ctx context.Context, projectID u
 		// Get metrics for each period
 		for _, pd := range periodData {
 			metrics, err := s.directRepo.GetCampaignMonthlyByCampaignID(ctx, projectID, campaign.ID, pd.year, pd.month)
-			if err != nil && err != gorm.ErrRecordNotFound {
+			if err != nil {
 				return nil, err
 			}
 

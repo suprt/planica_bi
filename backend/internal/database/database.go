@@ -8,9 +8,9 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/config"
-	applogger "gitlab.ugatu.su/gantseff/planica_bi/backend/internal/logger"
-	"gitlab.ugatu.su/gantseff/planica_bi/backend/internal/models"
+	"github.com/suprt/planica_bi/backend/internal/config"
+	applogger "github.com/suprt/planica_bi/backend/internal/logger"
+	"github.com/suprt/planica_bi/backend/internal/models"
 )
 
 // DB is the global database connection
@@ -58,6 +58,7 @@ func AutoMigrate() error {
 		return fmt.Errorf("database connection not initialized")
 	}
 
+	// Run GORM auto migrations for models
 	err := DB.AutoMigrate(
 		&models.Project{},
 		&models.User{},
