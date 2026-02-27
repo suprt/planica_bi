@@ -93,7 +93,9 @@ func SetupRoutes(
 
 	// Health check routes (public, no authentication required)
 	e.GET("/health", healthHandler.Health)
+	e.HEAD("/health", healthHandler.Health)
 	e.GET("/ready", healthHandler.Ready)
+	e.HEAD("/ready", healthHandler.Ready)
 
 	// API group
 	api := e.Group("/api")

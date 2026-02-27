@@ -49,12 +49,27 @@ func main() {
 
 	log.Info("Database connection established")
 
-	// Run migrations
+	// Run database migrations using GORM
 	if err := database.AutoMigrate(); err != nil {
 		log.Fatal("Failed to run migrations", zap.Error(err))
 	}
-
 	log.Info("Database migrations completed")
+
+	// Seed database with initial data
+	if err := database.SeedData(); err != nil {
+		log.Fatal("Failed to seed database", zap.Error(err))
+	}
+
+	// Seed test data if in debug mode
+	log.Info("Checking debug mode", zap.Bool("debug", cfg.AppDebug))
+	if cfg.AppDebug {
+		log.Info("Seeding test data...")
+		if err := database.SeedTestData(); err != nil {
+			log.Warn("Failed to seed test data", zap.Error(err))
+		} else {
+			log.Info("Test data seeded successfully")
+		}
+	}
 
 	// Initialize cache
 	cacheClient, err := cache.NewCache(cfg)

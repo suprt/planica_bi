@@ -19,10 +19,13 @@ FROM alpine:latest
 # Install only necessary packages (no Python needed)
 RUN apk --no-cache add ca-certificates tzdata wget
 
-WORKDIR /root/
+WORKDIR /app/
 
 # Copy the binary from builder
 COPY --from=builder /app/main .
+
+# Copy migrations directory
+COPY --from=builder /app/database/migrations ./database/migrations
 
 # Expose port
 EXPOSE 8080

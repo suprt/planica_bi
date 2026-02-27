@@ -188,6 +188,8 @@ CREATE TABLE IF NOT EXISTS `seo_queries_monthly` (
     FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+COMMIT;
+
 -- +migrate Down
 DROP TABLE IF EXISTS `seo_queries_monthly`;
 DROP TABLE IF EXISTS `direct_totals_monthly`;

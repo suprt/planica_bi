@@ -11,8 +11,11 @@ $EnvFile = "backend\.env"
 
 # Helper function to run docker compose with env file
 function Invoke-DockerCompose {
-    param([string]$CmdArgs)
-    & docker compose --env-file $EnvFile $CmdArgs.Split(' ')
+    param([string]$CommandArgs)
+    Write-Host "DEBUG: Running: docker compose --env-file $EnvFile $CommandArgs" -ForegroundColor Yellow
+    $command = "docker compose --env-file `"$EnvFile`" $CommandArgs"
+    Write-Host "DEBUG: Full command: $command" -ForegroundColor Cyan
+    Invoke-Expression $command
 }
 
 function Show-Help {
@@ -49,40 +52,40 @@ function Show-Help {
 
 switch ($Command) {
     "build" {
-        Invoke-DockerCompose -Args "build"
+        Invoke-DockerCompose -CommandArgs "build"
     }
     "build-backend" {
-        Invoke-DockerCompose -Args "build backend"
+        Invoke-DockerCompose -CommandArgs "build backend"
     }
     "up" {
-        Invoke-DockerCompose -Args "up -d"
+        Invoke-DockerCompose -CommandArgs "up -d"
         Write-Host "Services started. Waiting for health checks..." -ForegroundColor Yellow
         Start-Sleep -Seconds 3
-        Invoke-DockerCompose -Args "ps"
+        Invoke-DockerCompose -CommandArgs "ps"
     }
     "down" {
-        Invoke-DockerCompose -Args "down"
+        Invoke-DockerCompose -CommandArgs "down"
     }
     "restart" {
-        Invoke-DockerCompose -Args "down"
-        Invoke-DockerCompose -Args "up -d"
+        Invoke-DockerCompose -CommandArgs "down"
+        Invoke-DockerCompose -CommandArgs "up -d"
         Start-Sleep -Seconds 3
-        Invoke-DockerCompose -Args "ps"
+        Invoke-DockerCompose -CommandArgs "ps"
     }
     "logs" {
-        Invoke-DockerCompose -Args "logs -f"
+        Invoke-DockerCompose -CommandArgs "logs -f"
     }
     "logs-backend" {
-        Invoke-DockerCompose -Args "logs -f backend"
+        Invoke-DockerCompose -CommandArgs "logs -f backend"
     }
     "logs-mysql" {
-        Invoke-DockerCompose -Args "logs -f mysql"
+        Invoke-DockerCompose -CommandArgs "logs -f mysql"
     }
     "ps" {
-        Invoke-DockerCompose -Args "ps"
+        Invoke-DockerCompose -CommandArgs "ps"
     }
     "status" {
-        Invoke-DockerCompose -Args "ps"
+        Invoke-DockerCompose -CommandArgs "ps"
         Write-Host ""
         Write-Host "Service URLs:" -ForegroundColor Cyan
         Write-Host "  Backend API: http://localhost:8080"
@@ -90,30 +93,30 @@ switch ($Command) {
         Write-Host "  MySQL:      localhost:3306"
     }
     "clean" {
-        Invoke-DockerCompose -Args "down -v"
+        Invoke-DockerCompose -CommandArgs "down -v"
         Write-Host "All containers, volumes and networks removed" -ForegroundColor Green
     }
     "rebuild" {
-        Invoke-DockerCompose -Args "down -v"
-        Invoke-DockerCompose -Args "build"
-        Invoke-DockerCompose -Args "up -d"
+        Invoke-DockerCompose -CommandArgs "down -v"
+        Invoke-DockerCompose -CommandArgs "build"
+        Invoke-DockerCompose -CommandArgs "up -d"
         Write-Host "Waiting for services to be ready..." -ForegroundColor Yellow
         Start-Sleep -Seconds 5
-        Invoke-DockerCompose -Args "ps"
+        Invoke-DockerCompose -CommandArgs "ps"
     }
     "db-reset" {
-        Invoke-DockerCompose -Args "down -v"
+        Invoke-DockerCompose -CommandArgs "down -v"
         docker volume rm planica_bi_mysql_data -ErrorAction SilentlyContinue
-        Invoke-DockerCompose -Args "up -d mysql"
+        Invoke-DockerCompose -CommandArgs "up -d mysql"
         Write-Host "Waiting for MySQL to initialize..." -ForegroundColor Yellow
         Start-Sleep -Seconds 10
-        Invoke-DockerCompose -Args "up -d"
+        Invoke-DockerCompose -CommandArgs "up -d"
     }
     "db-shell" {
-        Invoke-DockerCompose -Args "exec mysql mysql -uroot -p$($env:DB_PASSWORD) --default-character-set=utf8mb4 reports"
+        Invoke-DockerCompose -CommandArgs "exec mysql mysql -uroot -p$($env:DB_PASSWORD) --default-character-set=utf8mb4 reports"
     }
     "backend-shell" {
-        Invoke-DockerCompose -Args "exec backend sh"
+        Invoke-DockerCompose -CommandArgs "exec backend sh"
     }
     "adminer" {
         Write-Host "Opening Adminer at http://localhost:8081" -ForegroundColor Cyan

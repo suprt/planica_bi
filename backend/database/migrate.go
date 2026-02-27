@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
@@ -10,8 +11,14 @@ import (
 
 // RunMigrations runs database migrations
 func RunMigrations(dbURL string) error {
+	// Get absolute path to migrations directory
+	migrationsPath, err := filepath.Abs("database/migrations")
+	if err != nil {
+		return fmt.Errorf("failed to get migrations path: %w", err)
+	}
+
 	m, err := migrate.New(
-		"file://database/migrations",
+		"file://"+migrationsPath,
 		dbURL,
 	)
 	if err != nil {
