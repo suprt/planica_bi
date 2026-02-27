@@ -11,8 +11,8 @@ $EnvFile = "backend\.env"
 
 # Helper function to run docker compose with env file
 function Invoke-DockerCompose {
-    param([string]$Args)
-    docker compose --env-file $EnvFile $Args
+    param([string]$CmdArgs)
+    & docker compose --env-file $EnvFile $CmdArgs.Split(' ')
 }
 
 function Show-Help {
