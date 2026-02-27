@@ -9,7 +9,7 @@ INSERT INTO `users` (
 ) VALUES (
     'Администратор',
     'admin@test.ru',
-    '$2a$10$ROHJgkE4RZOlwPp9hTw4Uu9pZ2ga1eeUuuFQ4lMg06UotIFBiarRK',
+    '$2a$10$Zw3HnTNxTLv6Jv/0Ld8YWuOxXzDuCmgyFa.1aXB.SQgzYFuZHYBym',
     'Europe/Moscow',
     'ru',
     1,
