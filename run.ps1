@@ -1,10 +1,18 @@
 # Planica BI - PowerShell helper script
 # Usage: .\run.ps1 <command>
 
+$EnvFile = "backend\.env"
+
 param(
     [Parameter(Position=0)]
     [string]$Command = "help"
 )
+
+# Helper function to run docker-compose with env file
+function Invoke-DockerCompose {
+    param([string]$Args)
+    docker-compose --env-file $EnvFile $Args
+}
 
 function Show-Help {
     Write-Host "Planica BI - PowerShell Commands" -ForegroundColor Cyan
@@ -40,40 +48,40 @@ function Show-Help {
 
 switch ($Command) {
     "build" {
-        docker-compose build
+        Invoke-DockerCompose -Args "build"
     }
     "build-backend" {
-        docker-compose build backend
+        Invoke-DockerCompose -Args "build backend"
     }
     "up" {
-        docker-compose up -d
+        Invoke-DockerCompose -Args "up -d"
         Write-Host "Services started. Waiting for health checks..." -ForegroundColor Yellow
         Start-Sleep -Seconds 3
-        docker-compose ps
+        Invoke-DockerCompose -Args "ps"
     }
     "down" {
-        docker-compose down
+        Invoke-DockerCompose -Args "down"
     }
     "restart" {
-        docker-compose down
-        docker-compose up -d
+        Invoke-DockerCompose -Args "down"
+        Invoke-DockerCompose -Args "up -d"
         Start-Sleep -Seconds 3
-        docker-compose ps
+        Invoke-DockerCompose -Args "ps"
     }
     "logs" {
-        docker-compose logs -f
+        Invoke-DockerCompose -Args "logs -f"
     }
     "logs-backend" {
-        docker-compose logs -f backend
+        Invoke-DockerCompose -Args "logs -f backend"
     }
     "logs-mysql" {
-        docker-compose logs -f mysql
+        Invoke-DockerCompose -Args "logs -f mysql"
     }
     "ps" {
-        docker-compose ps
+        Invoke-DockerCompose -Args "ps"
     }
     "status" {
-        docker-compose ps
+        Invoke-DockerCompose -Args "ps"
         Write-Host ""
         Write-Host "Service URLs:" -ForegroundColor Cyan
         Write-Host "  Backend API: http://localhost:8080"
@@ -81,30 +89,30 @@ switch ($Command) {
         Write-Host "  MySQL:      localhost:3306"
     }
     "clean" {
-        docker-compose down -v
+        Invoke-DockerCompose -Args "down -v"
         Write-Host "All containers, volumes and networks removed" -ForegroundColor Green
     }
     "rebuild" {
-        docker-compose down -v
-        docker-compose build
-        docker-compose up -d
+        Invoke-DockerCompose -Args "down -v"
+        Invoke-DockerCompose -Args "build"
+        Invoke-DockerCompose -Args "up -d"
         Write-Host "Waiting for services to be ready..." -ForegroundColor Yellow
         Start-Sleep -Seconds 5
-        docker-compose ps
+        Invoke-DockerCompose -Args "ps"
     }
     "db-reset" {
-        docker-compose down -v
+        Invoke-DockerCompose -Args "down -v"
         docker volume rm planica_bi_mysql_data -ErrorAction SilentlyContinue
-        docker-compose up -d mysql
+        Invoke-DockerCompose -Args "up -d mysql"
         Write-Host "Waiting for MySQL to initialize..." -ForegroundColor Yellow
         Start-Sleep -Seconds 10
-        docker-compose up -d
+        Invoke-DockerCompose -Args "up -d"
     }
     "db-shell" {
-        docker-compose exec mysql mysql -uroot -p1234 --default-character-set=utf8mb4 reports
+        Invoke-DockerCompose -Args "exec mysql mysql -uroot -p$($env:DB_PASSWORD) --default-character-set=utf8mb4 reports"
     }
     "backend-shell" {
-        docker-compose exec backend sh
+        Invoke-DockerCompose -Args "exec backend sh"
     }
     "adminer" {
         Write-Host "Opening Adminer at http://localhost:8081" -ForegroundColor Cyan
