@@ -1,12 +1,13 @@
 # Planica BI - PowerShell helper script
 # Usage: .\run.ps1 <command>
 
-$EnvFile = "backend\.env"
-
 param(
     [Parameter(Position=0)]
     [string]$Command = "help"
 )
+
+# Environment file path
+$EnvFile = "backend\.env"
 
 # Helper function to run docker-compose with env file
 function Invoke-DockerCompose {
